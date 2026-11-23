@@ -1,0 +1,47 @@
+@import "tailwindcss";
+
+@theme {
+  --color-cube-white: #FFFFFF;
+  --color-cube-yellow: #FFD500;
+  --color-cube-red: #B71234;
+  --color-cube-orange: #FF5800;
+  --color-cube-green: #009B48;
+  --color-cube-blue: #0046AD;
+  --color-cube-gray: #4B5563;
+  --color-surface: #0f172a;
+  --color-surface-raised: #1e293b;
+  --color-surface-hover: #334155;
+  --color-text-primary: #f1f5f9;
+  --color-text-secondary: #94a3b8;
+  --color-text-muted: #64748b;
+  --color-accent: #6366f1;
+  --color-accent-hover: #818cf8;
+  --color-border: #334155;
+}
+
+@keyframes sticker-flash {
+  0%, 100% { stroke-width: 1; stroke: #333; filter: none; }
+  50% { stroke-width: 3; stroke: #FFD700; filter: drop-shadow(0 0 6px #FFD700); }
+}
+
+@keyframes sticker-glow {
+  0%, 100% { filter: drop-shadow(0 0 2px rgba(255, 215, 0, 0.4)); }
+  50% { filter: drop-shadow(0 0 8px rgba(255, 215, 0, 0.8)); }
+}
+
+.sticker-flash {
+  animation: sticker-flash 1s ease-in-out infinite;
+}
+
+.sticker-glow {
+  animation: sticker-glow 1.2s ease-in-out infinite;
+}
+
+.sticker-dim {
+  opacity: 0.3;
+}
+
+.sticker-highlight {
+  stroke: #FFD700;
+  stroke-width: 3;
+}
