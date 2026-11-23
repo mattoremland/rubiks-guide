@@ -1,7 +1,8 @@
 import CubeDiagram from '../diagrams/CubeDiagram'
 import MoveSequence from '../notation/MoveSequence'
+import SubStepLabel from './SubStepLabel'
 
-export default function AlgorithmCard({ algorithm, puzzleType, dimensions }) {
+export default function AlgorithmCard({ algorithm, puzzleType, dimensions, label }) {
   return (
     <div className="bg-surface-raised border border-border rounded-xl p-5">
       <div className="flex flex-col sm:flex-row gap-4">
@@ -17,7 +18,8 @@ export default function AlgorithmCard({ algorithm, puzzleType, dimensions }) {
           />
         </div>
         <div className="flex-1 min-w-0">
-          <h4 className="text-base font-semibold text-text-primary">
+          <h4 className="flex items-center gap-2 text-base font-semibold text-text-primary">
+            {label && <SubStepLabel label={label} />}
             {algorithm.name}
           </h4>
           {algorithm.caseDescription && (

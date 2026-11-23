@@ -10,6 +10,22 @@ import AlgorithmCard from '../components/content/AlgorithmCard'
 import { PYRAMINX_SCRAMBLE } from '../data/methods/pyraminx'
 import PyraminxNotation from '../components/content/PyraminxNotation'
 import { withEmphasis } from '../lib/emphasis'
+import SubStepLabel from '../components/content/SubStepLabel'
+
+// Hands out sub-step labels (3a, 3b, ...) in the order items appear within a step.
+function labeler(stepNumber) {
+  let i = 0
+  return () => `${stepNumber}${String.fromCharCode(97 + i++)}`
+}
+
+function Caption({ label, children }) {
+  return (
+    <figcaption className="flex items-start gap-2 text-sm text-text-secondary max-w-xl">
+      <SubStepLabel label={label} />
+      {children && <span>{children}</span>}
+    </figcaption>
+  )
+}
 
 export default function PuzzlePage() {
   const { puzzleSlug } = useParams()
@@ -88,7 +104,9 @@ export default function PuzzlePage() {
         {method ? (
           <div className="space-y-6">
             <p className="text-text-secondary">{method.description}</p>
-            {method.stages.map((stage) => (
+            {method.stages.map((stage, stageIndex) => {
+              const nextLabel = labeler(stageIndex + 1)
+              return (
               <div key={stage.slug} className="bg-surface-raised border border-border rounded-lg p-5">
                 <h3 className="text-lg font-semibold text-text-primary mb-2">{stage.name}</h3>
                 <p className="text-text-secondary text-sm mb-4">{withEmphasis(stage.description)}</p>
@@ -105,13 +123,13 @@ export default function PuzzlePage() {
                           groups={fig.groups}
                           size={160}
                         />
-                        <figcaption className="text-sm text-text-secondary">{withEmphasis(fig.caption)}</figcaption>
+                        <Caption label={nextLabel()}>{withEmphasis(fig.caption)}</Caption>
                       </figure>
                     ))}
                   </div>
                 )}
                 {stage.setupState && (
-                  <div className="flex justify-center mb-4">
+                  <figure className="flex flex-col items-center gap-2 mb-4">
                     <CubeDiagram
                       puzzleType={puzzle.type}
                       dimensions={puzzle.dimensions}
@@ -119,7 +137,8 @@ export default function PuzzlePage() {
                       highlights={stage.highlights}
                       size={160}
                     />
-                  </div>
+                    <Caption label={nextLabel()} />
+                  </figure>
                 )}
                 {stage.animation && (
                   <figure className="flex flex-col items-center gap-2 mb-4">
@@ -131,9 +150,7 @@ export default function PuzzlePage() {
                       view={stage.animation.view}
                       size={180}
                     />
-                    {stage.animation.caption && (
-                      <figcaption className="text-sm text-text-secondary">{stage.animation.caption}</figcaption>
-                    )}
+                    <Caption label={nextLabel()}>{stage.animation.caption}</Caption>
                   </figure>
                 )}
                 {stage.footer && (
@@ -150,6 +167,7 @@ export default function PuzzlePage() {
                         algorithm={alg}
                         puzzleType={puzzle.type}
                         dimensions={puzzle.dimensions}
+                        label={nextLabel()}
                       />
                     ))}
                   </div>
@@ -166,13 +184,14 @@ export default function PuzzlePage() {
                           bottomBand={stage.closing.figure.bottomBand}
                           size={180}
                         />
-                        <figcaption className="text-sm text-text-secondary">{stage.closing.figure.caption}</figcaption>
+                        <Caption label={nextLabel()}>{stage.closing.figure.caption}</Caption>
                       </figure>
                     )}
                   </div>
                 )}
               </div>
-            ))}
+              )
+            })}
           </div>
         ) : (
           <div className="bg-surface-raised border border-border rounded-lg p-8 text-center">
