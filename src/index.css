@@ -21,20 +21,20 @@
 
 @keyframes sticker-flash {
   0%, 100% { stroke-width: 1; stroke: #333; filter: none; }
-  50% { stroke-width: 3; stroke: #FFD700; filter: drop-shadow(0 0 6px #FFD700); }
+  50% { stroke-width: 2; stroke: rgba(255, 255, 255, 0.9); filter: drop-shadow(0 0 3px rgba(255, 255, 255, 0.5)); }
 }
 
 @keyframes sticker-glow {
-  0%, 100% { filter: drop-shadow(0 0 2px rgba(255, 215, 0, 0.4)); }
-  50% { filter: drop-shadow(0 0 8px rgba(255, 215, 0, 0.8)); }
+  0%, 100% { filter: drop-shadow(0 0 2px rgba(255, 255, 255, 0.3)); }
+  50% { filter: drop-shadow(0 0 5px rgba(255, 255, 255, 0.6)); }
 }
 
 .sticker-flash {
-  animation: sticker-flash 1s ease-in-out infinite;
+  animation: sticker-flash 1.6s ease-in-out infinite;
 }
 
 .sticker-glow {
-  animation: sticker-glow 1.2s ease-in-out infinite;
+  animation: sticker-glow 2s ease-in-out infinite;
 }
 
 .sticker-dim {
@@ -42,6 +42,6 @@
 }
 
 .sticker-highlight {
-  stroke: #FFD700;
-  stroke-width: 3;
+  stroke: rgba(255, 255, 255, 0.9);
+  stroke-width: 2;
 }

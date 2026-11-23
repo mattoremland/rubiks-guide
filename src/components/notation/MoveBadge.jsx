@@ -3,9 +3,11 @@ export default function MoveBadge({ move }) {
     return <span className="text-text-muted font-mono text-lg">{move.value}</span>
   }
 
+  const textClass = /(^|\s)text-/.test(move.colorClass) ? '' : 'text-white'
+
   return (
     <span
-      className={`inline-flex items-center px-2 py-0.5 rounded font-mono text-sm font-medium text-white ${move.colorClass}`}
+      className={`inline-flex items-center px-2 py-0.5 rounded font-mono text-sm font-medium ${textClass} ${move.colorClass}`}
       title={`${move.face} face${move.modifier === "'" ? ', counterclockwise' : move.modifier === '2' ? ', 180°' : ', clockwise'}`}
     >
       {move.base}

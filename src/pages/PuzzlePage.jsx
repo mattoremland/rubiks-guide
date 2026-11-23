@@ -4,7 +4,10 @@ import { getNotation } from '../data/notations'
 import Breadcrumbs from '../components/layout/Breadcrumbs'
 import CubeDiagram from '../components/diagrams/CubeDiagram'
 import MoveSequence from '../components/notation/MoveSequence'
-import { createSolvedState } from '../lib/cubeState'
+import { createSolvedState, createPyraminxSolvedState } from '../lib/cubeState'
+import { getMethod } from '../data/methods'
+import AlgorithmCard from '../components/content/AlgorithmCard'
+import { PYRAMINX_SCRAMBLE } from '../data/methods/pyraminx'
 
 export default function PuzzlePage() {
   const { puzzleSlug } = useParams()
@@ -20,7 +23,10 @@ export default function PuzzlePage() {
     )
   }
 
-  const state = puzzle.type !== 'pyraminx' ? createSolvedState(puzzle.dimensions) : null
+  const state = puzzle.type === 'pyraminx'
+    ? PYRAMINX_SCRAMBLE
+    : createSolvedState(puzzle.dimensions)
+  const method = getMethod(puzzleSlug)
 
   return (
     <div>
@@ -31,18 +37,12 @@ export default function PuzzlePage() {
 
       <div className="flex flex-col md:flex-row gap-8 items-start mb-10">
         <div className="flex-shrink-0">
-          {state ? (
-            <CubeDiagram
-              puzzleType={puzzle.type}
-              dimensions={puzzle.dimensions}
-              state={state}
-              size={200}
-            />
-          ) : (
-            <div className="text-6xl text-center w-[200px] h-[200px] flex items-center justify-center">
-              🔺
-            </div>
-          )}
+          <CubeDiagram
+            puzzleType={puzzle.type}
+            dimensions={puzzle.dimensions}
+            state={state}
+            size={200}
+          />
         </div>
         <div>
           <h1 className="text-3xl font-bold text-text-primary mb-2">{puzzle.name}</h1>
@@ -63,10 +63,10 @@ export default function PuzzlePage() {
                 <div className="flex flex-wrap gap-2">
                   {group.moves.map((move) => (
                     <div key={move} className="flex flex-col items-center gap-1">
-                      <MoveSequence notation={move} />
-                      <MoveSequence notation={`${move}'`} />
+                      <MoveSequence notation={move} neutral={puzzle.type === 'pyraminx'} />
+                      <MoveSequence notation={`${move}'`} neutral={puzzle.type === 'pyraminx'} />
                       {notation.modifiers?.['2'] && (
-                        <MoveSequence notation={`${move}2`} />
+                        <MoveSequence notation={`${move}2`} neutral={puzzle.type === 'pyraminx'} />
                       )}
                     </div>
                   ))}
@@ -78,12 +78,79 @@ export default function PuzzlePage() {
       )}
 
       <section>
-        <h2 className="text-xl font-semibold text-text-primary mb-4">Solving Method</h2>
-        <div className="bg-surface-raised border border-border rounded-lg p-8 text-center">
-          <p className="text-text-muted italic">
-            Solving steps coming soon. Check back as we add content!
-          </p>
-        </div>
+        <h2 className="text-xl font-semibold text-text-primary mb-4">
+          {method ? `Solving Method: ${method.name}` : 'Solving Method'}
+        </h2>
+        {method ? (
+          <div className="space-y-6">
+            <p className="text-text-secondary">{method.description}</p>
+            {method.stages.map((stage) => (
+              <div key={stage.slug} className="bg-surface-raised border border-border rounded-lg p-5">
+                <h3 className="text-lg font-semibold text-text-primary mb-2">{stage.name}</h3>
+                <p className="text-text-secondary text-sm mb-4">{stage.description}</p>
+                {stage.figures && (
+                  <div className="flex flex-wrap justify-center gap-8 mb-6">
+                    {stage.figures.map((fig, i) => (
+                      <figure key={i} className="flex flex-col items-center gap-2">
+                        <CubeDiagram
+                          puzzleType={puzzle.type}
+                          dimensions={puzzle.dimensions}
+                          state={fig.state}
+                          outline={fig.outline}
+                          size={160}
+                        />
+                        <figcaption className="text-sm text-text-secondary">{fig.caption}</figcaption>
+                      </figure>
+                    ))}
+                  </div>
+                )}
+                {stage.setupState && (
+                  <div className="flex justify-center mb-4">
+                    <CubeDiagram
+                      puzzleType={puzzle.type}
+                      dimensions={puzzle.dimensions}
+                      state={stage.setupState}
+                      highlights={stage.highlights}
+                      size={160}
+                    />
+                  </div>
+                )}
+                {stage.animation && (
+                  <figure className="flex flex-col items-center gap-2 mb-4">
+                    <CubeDiagram
+                      puzzleType={puzzle.type}
+                      dimensions={puzzle.dimensions}
+                      state={stage.animation.state}
+                      turn={stage.animation.turn}
+                      size={180}
+                    />
+                    {stage.animation.caption && (
+                      <figcaption className="text-sm text-text-secondary">{stage.animation.caption}</figcaption>
+                    )}
+                  </figure>
+                )}
+                {stage.algorithms.length > 0 && (
+                  <div className="space-y-4">
+                    {stage.algorithms.map((alg, i) => (
+                      <AlgorithmCard
+                        key={i}
+                        algorithm={alg}
+                        puzzleType={puzzle.type}
+                        dimensions={puzzle.dimensions}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="bg-surface-raised border border-border rounded-lg p-8 text-center">
+            <p className="text-text-muted italic">
+              Solving steps coming soon. Check back as we add content!
+            </p>
+          </div>
+        )}
       </section>
     </div>
   )

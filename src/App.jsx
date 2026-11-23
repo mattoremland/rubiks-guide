@@ -3,10 +3,12 @@ import Layout from './components/layout/Layout'
 import HomePage from './pages/HomePage'
 import PuzzlePage from './pages/PuzzlePage'
 import NotFoundPage from './pages/NotFoundPage'
+import DevRotatePage from './pages/DevRotatePage'
 
 export default function App() {
   return (
     <Routes>
+      <Route path="dev/pyraminx" element={<DevRotatePage />} />
       <Route element={<Layout />}>
         <Route index element={<HomePage />} />
         <Route path="puzzle/:puzzleSlug" element={<PuzzlePage />} />

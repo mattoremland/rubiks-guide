@@ -1,3 +1,12 @@
+export function createPyraminxSolvedState() {
+  return {
+    F: Array(9).fill('G'),
+    L: Array(9).fill('B'),
+    R: Array(9).fill('R'),
+    D: Array(9).fill('Y'),
+  }
+}
+
 export function createSolvedState(dims) {
   const { x: w, y: h, z: d } = dims
   return {

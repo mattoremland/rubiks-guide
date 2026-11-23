@@ -12,6 +12,8 @@ export default function AlgorithmCard({ algorithm, puzzleType, dimensions }) {
             state={algorithm.setupState}
             highlights={algorithm.highlights}
             size={160}
+            turn={algorithm.turn}
+            outline={algorithm.outline}
           />
         </div>
         <div className="flex-1 min-w-0">
@@ -24,7 +26,7 @@ export default function AlgorithmCard({ algorithm, puzzleType, dimensions }) {
             </p>
           )}
           <div className="mt-3">
-            <MoveSequence notation={algorithm.moves} />
+            <MoveSequence notation={algorithm.moves} neutral={puzzleType === 'pyraminx'} />
           </div>
           {algorithm.tips && (
             <p className="text-xs text-text-muted mt-3 italic">
