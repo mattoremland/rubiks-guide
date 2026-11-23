@@ -8,6 +8,8 @@ import { createSolvedState, createPyraminxSolvedState } from '../lib/cubeState'
 import { getMethod } from '../data/methods'
 import AlgorithmCard from '../components/content/AlgorithmCard'
 import { PYRAMINX_SCRAMBLE } from '../data/methods/pyraminx'
+import PyraminxNotation from '../components/content/PyraminxNotation'
+import { withEmphasis } from '../lib/emphasis'
 
 export default function PuzzlePage() {
   const { puzzleSlug } = useParams()
@@ -53,7 +55,9 @@ export default function PuzzlePage() {
         </div>
       </div>
 
-      {notation && (
+      {puzzle.type === 'pyraminx' && <PyraminxNotation />}
+
+      {notation && puzzle.type !== 'pyraminx' && (
         <section className="mb-10">
           <h2 className="text-xl font-semibold text-text-primary mb-4">Notation</h2>
           <div className="space-y-4">
@@ -87,7 +91,7 @@ export default function PuzzlePage() {
             {method.stages.map((stage) => (
               <div key={stage.slug} className="bg-surface-raised border border-border rounded-lg p-5">
                 <h3 className="text-lg font-semibold text-text-primary mb-2">{stage.name}</h3>
-                <p className="text-text-secondary text-sm mb-4">{stage.description}</p>
+                <p className="text-text-secondary text-sm mb-4">{withEmphasis(stage.description)}</p>
                 {stage.figures && (
                   <div className="flex flex-wrap justify-center gap-8 mb-6">
                     {stage.figures.map((fig, i) => (
@@ -97,9 +101,11 @@ export default function PuzzlePage() {
                           dimensions={puzzle.dimensions}
                           state={fig.state}
                           outline={fig.outline}
+                          view={fig.view}
+                          groups={fig.groups}
                           size={160}
                         />
-                        <figcaption className="text-sm text-text-secondary">{fig.caption}</figcaption>
+                        <figcaption className="text-sm text-text-secondary">{withEmphasis(fig.caption)}</figcaption>
                       </figure>
                     ))}
                   </div>
@@ -121,13 +127,20 @@ export default function PuzzlePage() {
                       puzzleType={puzzle.type}
                       dimensions={puzzle.dimensions}
                       state={stage.animation.state}
-                      turn={stage.animation.turn}
+                      animation={stage.animation}
+                      view={stage.animation.view}
                       size={180}
                     />
                     {stage.animation.caption && (
                       <figcaption className="text-sm text-text-secondary">{stage.animation.caption}</figcaption>
                     )}
                   </figure>
+                )}
+                {stage.footer && (
+                  <p className="text-text-secondary text-sm mb-4">{withEmphasis(stage.footer)}</p>
+                )}
+                {stage.note && (
+                  <p className="text-text-secondary text-sm mb-4">{withEmphasis(stage.note)}</p>
                 )}
                 {stage.algorithms.length > 0 && (
                   <div className="space-y-4">
@@ -139,6 +152,23 @@ export default function PuzzlePage() {
                         dimensions={puzzle.dimensions}
                       />
                     ))}
+                  </div>
+                )}
+                {stage.closing && (
+                  <div className="mt-6">
+                    <p className="text-text-secondary text-sm mb-4">{withEmphasis(stage.closing.text)}</p>
+                    {stage.closing.figure && (
+                      <figure className="flex flex-col items-center gap-2">
+                        <CubeDiagram
+                          puzzleType={puzzle.type}
+                          dimensions={puzzle.dimensions}
+                          state={stage.closing.figure.state}
+                          bottomBand={stage.closing.figure.bottomBand}
+                          size={180}
+                        />
+                        <figcaption className="text-sm text-text-secondary">{stage.closing.figure.caption}</figcaption>
+                      </figure>
+                    )}
                   </div>
                 )}
               </div>

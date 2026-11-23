@@ -1,70 +1,125 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { getFaceStickers, getVisibleFaces, getPyraFaceShading } from '../../lib/pyraminxGeometry'
-import { getTurnPolygons, getTurnArrow, getLayerOutline, getStickerGroupOutline } from '../../lib/pyraminx3d'
+import {
+  applyTurn, getTurnPolygons, getPuzzlePolygons, getTurnArrow, getLayerOutline,
+  getStickerGroupOutline, getBottomBandOutline, getViewBounds, getCornerLabelPoint, DEFAULT_VIEW,
+} from '../../lib/pyraminx3d'
 import { getSticker, getHighlight } from '../../lib/cubeState'
 import { getStickerColor, shadedColor } from '../../data/colors'
 import IsoSticker from './IsoSticker'
 
-const BASE_BOX = { minX: -89, minY: -113, maxX: 108, maxY: 78 }
-const PAD = 8
-
-const HOLD_START = 1200
-const SPIN = 1000
-const HOLD_END = 1500
-const HIGHLIGHT_PAUSE = 450
-const HIGHLIGHT_IN = 350
-const HIGHLIGHT_HOLD = 2000
-const BEFORE_PAUSE = 400
-const BEFORE_IN = 300
-const BEFORE_HOLD = 900
-const BEFORE_OUT = 250
-const FADE = 350
+const PAD = 25
+const ARROW_PAD = 8
 const STEP = 2 * Math.PI / 3
 
 const easeInOut = (t) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2)
-const ramp = (t, start, length) => Math.min(1, Math.max(0, (t - start) / length))
 
-// Loop: hold (optionally outlining the layer about to turn), turn, hold (optionally pausing then
-// fading in a highlight), fade out, fade back in at the start.
-function useTurnLoop(dir, withBefore, withHighlight) {
-  const [frame, setFrame] = useState({ angle: 0, opacity: 1, before: 0, highlight: 0 })
+// Ordered phases of one play-through. Each has a duration, the move it belongs to
+// (moves.length = finished), and what it animates: 'spin' turns that move, 'outlineIn' /
+// 'outlineOut' fade the corner outline, 'highlightIn' fades in the end highlight, and for
+// looping animations 'fadeOut' / 'fadeIn' restart from the beginning.
+function buildTimeline(moveCount, outlineMoves, withHighlight, loop) {
+  const single = moveCount === 1
+  const phases = []
+  for (let k = 0; k < moveCount; k++) {
+    phases.push({ k, kind: 'rest', ms: k === 0 ? (outlineMoves ? 400 : 800) : 300 })
+    if (outlineMoves) {
+      phases.push({ k, kind: 'outlineIn', ms: 300 })
+      phases.push({ k, kind: 'outlineHold', ms: single ? 900 : 600 })
+      phases.push({ k, kind: 'outlineOut', ms: 250 })
+    }
+    phases.push({ k, kind: 'spin', ms: single ? 1000 : 900 })
+  }
+  if (withHighlight) {
+    phases.push({ k: moveCount, kind: 'rest', ms: 450 })
+    phases.push({ k: moveCount, kind: 'highlightIn', ms: 350 })
+  }
+  if (loop) {
+    phases.push({ k: moveCount, kind: 'rest', ms: withHighlight ? 2000 : 1500 })
+    phases.push({ k: moveCount, kind: 'fadeOut', ms: 350 })
+    phases.push({ k: 0, kind: 'fadeIn', ms: 350 })
+  }
+  return phases
+}
+
+const START_FRAME = { k: 0, angle: 0, outline: 0, highlight: 0, opacity: 1 }
+
+function frameAt(phases, t, dirs, withHighlight) {
+  let start = 0
+  for (const p of phases) {
+    if (t < start + p.ms) {
+      const u = (t - start) / p.ms
+      const f = { k: p.k, angle: 0, outline: 0, highlight: 0, opacity: 1 }
+      if (p.kind === 'spin') f.angle = dirs[p.k] * STEP * easeInOut(u)
+      if (p.kind === 'outlineIn') f.outline = u
+      if (p.kind === 'outlineHold') f.outline = 1
+      if (p.kind === 'outlineOut') f.outline = 1 - u
+      if (p.kind === 'highlightIn') f.highlight = u
+      const highlightAt = phases.findIndex(q => q.kind === 'highlightIn')
+      if (highlightAt >= 0 && phases.indexOf(p) > highlightAt && p.kind !== 'fadeIn') f.highlight = 1
+      if (p.kind === 'fadeOut') f.opacity = 1 - u
+      if (p.kind === 'fadeIn') f.opacity = u
+      return f
+    }
+    start += p.ms
+  }
+  return { k: dirs.length, angle: 0, outline: 0, highlight: withHighlight ? 1 : 0, opacity: 1 }
+}
+
+// Plays the moves once each time `play` is called, then holds the final position;
+// with `animation.loop` it repeats forever once started.
+function useMovePlayer(animation) {
+  const moves = animation?.moves
+  const withHighlight = !!animation?.highlightAfter
+  const loop = !!animation?.loop
+  const phases = useMemo(
+    () => moves && buildTimeline(moves.length, !!animation.outlineMoves, withHighlight, loop),
+    [moves, animation, withHighlight, loop],
+  )
+  const [frame, setFrame] = useState(START_FRAME)
+  const [playCount, setPlayCount] = useState(0)
+  const [playing, setPlaying] = useState(false)
+
   useEffect(() => {
-    if (!dir) return
-    const holdStart = withBefore ? BEFORE_PAUSE + BEFORE_IN + BEFORE_HOLD + BEFORE_OUT : HOLD_START
-    const after = withHighlight ? HIGHLIGHT_PAUSE + HIGHLIGHT_IN + HIGHLIGHT_HOLD : HOLD_END
-    const turnEnd = holdStart + SPIN
-    const fadeStart = turnEnd + after
-    const cycle = fadeStart + FADE * 2
+    if (!phases || playCount === 0) return
+    const total = phases.reduce((a, p) => a + p.ms, 0)
+    const dirs = moves.map(m => m.dir)
     let raf
     const start = performance.now()
+    setPlaying(true)
     const tick = (now) => {
-      const t = (now - start) % cycle
-      let progress = 1, opacity = 1, before = 0, highlight = 0
-      if (t < holdStart) {
-        progress = 0
-        if (withBefore) {
-          before = ramp(t, BEFORE_PAUSE, BEFORE_IN) - ramp(t, holdStart - BEFORE_OUT, BEFORE_OUT)
-        }
-      } else if (t < turnEnd) progress = easeInOut((t - holdStart) / SPIN)
-      else if (t < fadeStart) {
-        if (withHighlight) highlight = Math.min(1, Math.max(0, (t - turnEnd - HIGHLIGHT_PAUSE) / HIGHLIGHT_IN))
-      } else if (t < fadeStart + FADE) {
-        opacity = 1 - (t - fadeStart) / FADE
-        highlight = withHighlight ? 1 : 0
-      } else {
-        progress = 0
-        opacity = (t - fadeStart - FADE) / FADE
-      }
-      setFrame({ angle: dir * STEP * progress, opacity, before, highlight })
-      raf = requestAnimationFrame(tick)
+      const t = loop ? (now - start) % total : now - start
+      setFrame(frameAt(phases, t, dirs, withHighlight))
+      if (loop || t < total) raf = requestAnimationFrame(tick)
+      else setPlaying(false)
     }
     raf = requestAnimationFrame(tick)
     return () => cancelAnimationFrame(raf)
-  }, [dir, withBefore, withHighlight])
-  return frame
+  }, [phases, moves, playCount, withHighlight, loop])
+
+  return { frame, playing, played: playCount > 0, play: () => setPlayCount(c => c + 1) }
+}
+
+// Calls `onVisible` once, the first time the element is mostly on screen.
+function useFirstVisible(ref, enabled, onVisible) {
+  useEffect(() => {
+    if (!enabled || !ref.current) return
+    const observer = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting) {
+        observer.disconnect()
+        onVisible()
+      }
+    }, { threshold: 0.6 })
+    observer.observe(ref.current)
+    return () => observer.disconnect()
+    // onVisible only needs to fire once per mount
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [enabled])
 }
 
 const ptsStr = (points) => points.map(p => `${p.x},${p.y}`).join(' ')
+
+const glow = { filter: 'drop-shadow(0 0 3px rgba(255, 255, 255, 0.6))' }
 
 function StaticBody({ state, highlights }) {
   return getVisibleFaces().map((face) => {
@@ -85,8 +140,8 @@ function StaticBody({ state, highlights }) {
   })
 }
 
-function TurningBody({ state, turn, angle }) {
-  return getTurnPolygons(state, turn.vertex, turn.layer, angle).map((p, i) => (
+function Polygons({ polys }) {
+  return polys.map((p, i) => (
     <polygon
       key={i}
       points={ptsStr(p.points)}
@@ -98,55 +153,126 @@ function TurningBody({ state, turn, angle }) {
   ))
 }
 
-// `turn`: { vertex, layer: 'tip' | 'big', dir, highlightBefore?, highlightAfter?: [{ face, indices }] } loops
-// that layer turning, optionally outlining it first and outlining sticker groups once it lands;
-// `outline`: { vertex, layer } circles a corner layer.
-export default function IsoPyraminx({ state, highlights, size = 200, turn, outline }) {
-  const { angle, opacity, before, highlight } = useTurnLoop(turn?.dir, !!turn?.highlightBefore, !!turn?.highlightAfter)
-  const arrow = turn && getTurnArrow(turn.vertex, turn.dir)
+// `animation`: { moves: [{ vertex, layer: 'tip' | 'big', dir }], outlineMoves?, highlightAfter?: [{ face, indices }] }
+// plays the moves once from `state` (when first scrolled into view, then on Replay), optionally outlining each corner before it turns and outlining sticker
+// groups at the end. `view`: { x, y } camera angles in degrees. `outline`: { vertex, layer } circles a corner;
+// `bottomBand` outlines the bottom third of the side faces; `groups`: [{ face, indices }] outlines stickers;
+// `labels`: { vertex: text } names corners.
+export default function IsoPyraminx({ state, highlights, size = 200, animation, view, outline, bottomBand, groups, labels }) {
+  const moves = animation?.moves
+  const v = view ?? DEFAULT_VIEW
+  const { frame, playing, played, play } = useMovePlayer(animation)
+  const wrapper = useRef(null)
+  useFirstVisible(wrapper, !!moves, play)
 
-  const box = { ...BASE_BOX }
-  if (arrow) {
-    box.minX = Math.min(box.minX, arrow.bounds.minX - PAD)
-    box.minY = Math.min(box.minY, arrow.bounds.minY - PAD)
-    box.maxX = Math.max(box.maxX, arrow.bounds.maxX + PAD)
-    box.maxY = Math.max(box.maxY, arrow.bounds.maxY + PAD)
+  const states = useMemo(() => {
+    if (!moves) return null
+    const list = [state]
+    for (const m of moves) list.push(applyTurn(list[list.length - 1], m.vertex, m.layer, m.dir))
+    return list
+  }, [state, moves])
+
+  const arrows = useMemo(() => moves?.map(m => getTurnArrow(m.vertex, m.dir, v)) ?? [], [moves, v])
+
+  const b = getViewBounds(v)
+  const box = { minX: b.minX - PAD, minY: b.minY - PAD, maxX: b.maxX + PAD, maxY: b.maxY + PAD }
+  for (const a of arrows) {
+    box.minX = Math.min(box.minX, a.bounds.minX - ARROW_PAD)
+    box.minY = Math.min(box.minY, a.bounds.minY - ARROW_PAD)
+    box.maxX = Math.max(box.maxX, a.bounds.maxX + ARROW_PAD)
+    box.maxY = Math.max(box.maxY, a.bounds.maxY + ARROW_PAD)
+  }
+  const labelPoints = labels ? Object.entries(labels).map(([vertex, text]) => ({ text, ...getCornerLabelPoint(vertex, v) })) : []
+  for (const p of labelPoints) {
+    box.minX = Math.min(box.minX, p.x - 14)
+    box.minY = Math.min(box.minY, p.y - 14)
+    box.maxX = Math.max(box.maxX, p.x + 14)
+    box.maxY = Math.max(box.maxY, p.y + 14)
   }
   const viewBox = `${box.minX} ${box.minY} ${box.maxX - box.minX} ${box.maxY - box.minY}`
 
-  return (
+  let body
+  if (moves) {
+    const { k, angle } = frame
+    const m = moves[k]
+    body = <Polygons polys={m ? getTurnPolygons(states[k], m.vertex, m.layer, angle, v) : getPuzzlePolygons(states[k], v)} />
+  } else if (view) {
+    body = <Polygons polys={getPuzzlePolygons(state, v)} />
+  } else {
+    body = <StaticBody state={state} highlights={highlights} />
+  }
+
+  const finished = moves && frame.k >= moves.length
+  const currentMove = moves && !finished && moves[frame.k]
+  const arrow = moves && !finished && arrows[frame.k]
+
+  const svg = (
     <svg viewBox={viewBox} width={size} height={size} className="block">
-      <g style={{ opacity }}>
-        {turn
-          ? <TurningBody state={state} turn={turn} angle={angle} />
-          : <StaticBody state={state} highlights={highlights} />}
-        {turn?.highlightBefore && before > 0 && (
+      <g style={{ opacity: frame.opacity }}>
+        {body}
+        {currentMove && frame.outline > 0 && (
           <polygon
-            points={ptsStr(getLayerOutline(turn.vertex, turn.layer))}
+            points={ptsStr(getLayerOutline(currentMove.vertex, currentMove.layer, v))}
             fill="rgba(255, 255, 255, 0.12)"
             stroke="#FFFFFF"
             strokeWidth={3}
             strokeLinejoin="round"
-            opacity={before}
-            style={{ filter: 'drop-shadow(0 0 3px rgba(255, 255, 255, 0.6))' }}
+            opacity={frame.outline}
+            style={glow}
           />
         )}
-        {turn?.highlightAfter && highlight > 0 && turn.highlightAfter.map((g, i) => (
+        {animation?.highlightAfter && frame.highlight > 0 && animation.highlightAfter.map((g, i) => (
           <polygon
             key={i}
-            points={ptsStr(getStickerGroupOutline(g.face, g.indices))}
+            points={ptsStr(getStickerGroupOutline(g.face, g.indices, v))}
             fill="rgba(255, 255, 255, 0.12)"
             stroke="#FFFFFF"
             strokeWidth={2.5}
             strokeLinejoin="round"
-            opacity={highlight}
-            style={{ filter: 'drop-shadow(0 0 3px rgba(255, 255, 255, 0.6))' }}
+            opacity={frame.highlight}
+            style={glow}
           />
         ))}
       </g>
       {outline && (
         <polygon
-          points={ptsStr(getLayerOutline(outline.vertex, outline.layer))}
+          points={ptsStr(getLayerOutline(outline.vertex, outline.layer, v))}
+          fill="none"
+          stroke="#FFFFFF"
+          strokeWidth={3}
+          strokeLinejoin="round"
+          style={{ filter: 'drop-shadow(0 0 2px rgba(0, 0, 0, 0.8))' }}
+        />
+      )}
+      {groups?.map((g, i) => (
+        <polygon
+          key={i}
+          points={ptsStr(getStickerGroupOutline(g.face, g.indices, v))}
+          fill="none"
+          stroke="#FFFFFF"
+          strokeWidth={2.5}
+          strokeLinejoin="round"
+          style={{ filter: 'drop-shadow(0 0 2px rgba(0, 0, 0, 0.8))' }}
+        />
+      ))}
+      {labelPoints.map((p) => (
+        <text
+          key={p.text}
+          x={p.x}
+          y={p.y}
+          textAnchor="middle"
+          dominantBaseline="central"
+          fill="#FFD700"
+          fontSize={18}
+          fontWeight={700}
+          fontFamily="ui-monospace, monospace"
+        >
+          {p.text}
+        </text>
+      ))}
+      {bottomBand && (
+        <polygon
+          points={ptsStr(getBottomBandOutline(v))}
           fill="none"
           stroke="#FFFFFF"
           strokeWidth={3}
@@ -173,5 +299,26 @@ export default function IsoPyraminx({ state, highlights, size = 200, turn, outli
         </>
       )}
     </svg>
+  )
+
+  if (!moves) return svg
+  if (animation.loop) return <div ref={wrapper}>{svg}</div>
+
+  return (
+    <div ref={wrapper} className="flex flex-col items-center gap-1">
+      {svg}
+      <button
+        type="button"
+        onClick={play}
+        disabled={playing || !played}
+        className="flex items-center gap-1 px-2.5 py-1 text-xs rounded-md border border-border text-text-secondary hover:text-text-primary hover:bg-surface-hover disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-text-secondary disabled:cursor-default"
+      >
+        <svg viewBox="0 0 16 16" width="12" height="12" aria-hidden="true">
+          <path d="M13 8a5 5 0 1 1-1.5-3.6" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+          <path d="M12.5 1.5v3.5H9" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+        Replay
+      </button>
+    </div>
   )
 }

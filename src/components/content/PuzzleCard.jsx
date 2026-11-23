@@ -1,13 +1,14 @@
 import { Link } from 'react-router-dom'
 import CubeDiagram from '../diagrams/CubeDiagram'
 import { createSolvedState } from '../../lib/cubeState'
+import { PYRAMINX_SCRAMBLE } from '../../data/methods/pyraminx'
 
 const difficultyLabels = ['', 'Easy', 'Easy', 'Medium', 'Medium', 'Hard', 'Expert']
 
 export default function PuzzleCard({ puzzle }) {
-  const state = puzzle.type !== 'pyraminx'
-    ? createSolvedState(puzzle.dimensions)
-    : null
+  const state = puzzle.type === 'pyraminx'
+    ? PYRAMINX_SCRAMBLE
+    : createSolvedState(puzzle.dimensions)
 
   return (
     <Link
@@ -15,16 +16,12 @@ export default function PuzzleCard({ puzzle }) {
       className="group block bg-surface-raised border border-border rounded-xl p-6 hover:border-accent/50 hover:bg-surface-hover transition-all"
     >
       <div className="flex items-center justify-center mb-4 h-32">
-        {state ? (
-          <CubeDiagram
-            puzzleType={puzzle.type}
-            dimensions={puzzle.dimensions}
-            state={state}
-            size={120}
-          />
-        ) : (
-          <div className="text-4xl">🔺</div>
-        )}
+        <CubeDiagram
+          puzzleType={puzzle.type}
+          dimensions={puzzle.dimensions}
+          state={state}
+          size={120}
+        />
       </div>
       <h3 className="text-lg font-semibold text-text-primary group-hover:text-accent transition-colors">
         {puzzle.name}

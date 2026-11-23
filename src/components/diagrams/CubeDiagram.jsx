@@ -8,13 +8,27 @@ export default function CubeDiagram({
   highlights,
   angle = 'UFR',
   size = 200,
-  turn,
+  animation,
+  view,
   outline,
+  bottomBand,
+  groups,
+  labels,
 }) {
   if (puzzleType === 'pyraminx') {
     return (
       <div className="flex items-center justify-center">
-        <IsoPyraminx state={state} highlights={highlights} size={size} turn={turn} outline={outline} />
+        <IsoPyraminx
+          state={state}
+          highlights={highlights}
+          size={size}
+          animation={animation}
+          view={view}
+          outline={outline}
+          bottomBand={bottomBand}
+          groups={groups}
+          labels={labels}
+        />
       </div>
     )
   }

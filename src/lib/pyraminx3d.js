@@ -18,11 +18,11 @@ const FACE_KEYS = {
   D: ['fl', 'fr', 'back'],
 }
 
-// Fraction of an edge, from the turning vertex, that each layer covers.
-const LAYER_DEPTH = { tip: 1 / 3, big: 2 / 3 }
+// Fraction of an edge, from the turning vertex, that each layer covers ('all' rotates the whole puzzle).
+const LAYER_DEPTH = { tip: 1 / 3, big: 2 / 3, all: 4 / 3 }
 
-const VIEW_X = -16 * Math.PI / 180
-const VIEW_Y = 72 * Math.PI / 180
+// Camera angles in degrees.
+export const DEFAULT_VIEW = { x: -16, y: 72 }
 
 const add = (a, b) => a.map((x, i) => x + b[i])
 const sub = (a, b) => a.map((x, i) => x - b[i])
@@ -37,10 +37,13 @@ function rotateAbout(p, axis, angle) {
   return add(add(scale(p, c), scale(cross(axis, p), s)), scale(axis, dot(axis, p) * (1 - c)))
 }
 
-function toView(p) {
-  const cy = Math.cos(VIEW_Y), sy = Math.sin(VIEW_Y)
+// The camera looks along +z with x to the right, so the drawing is a mirror image of the model:
+// a turn with dir +1 (counterclockwise in the model) looks clockwise on screen.
+function toView(p, view) {
+  const ay = view.y * Math.PI / 180, ax = view.x * Math.PI / 180
+  const cy = Math.cos(ay), sy = Math.sin(ay)
   const q = [p[0] * cy + p[2] * sy, p[1], -p[0] * sy + p[2] * cy]
-  const cx = Math.cos(VIEW_X), sx = Math.sin(VIEW_X)
+  const cx = Math.cos(ax), sx = Math.sin(ax)
   return [q[0], q[1] * cx - q[2] * sx, q[1] * sx + q[2] * cx]
 }
 
@@ -106,19 +109,19 @@ export function applyTurn(state, vertex, layer, dir) {
   return next
 }
 
-function visiblePolys(polys) {
+function visiblePolys(polys, view) {
   const out = []
   for (const p of polys) {
-    const n = toView(p.normal)
+    const n = toView(p.normal, view)
     if (n[2] >= 0) continue
-    out.push({ points: p.pts.map(q => to2d(toView(q))), color: p.color, shade: shadeFor(n), face: p.face, index: p.index })
+    out.push({ points: p.pts.map(q => to2d(toView(q, view))), color: p.color, shade: shadeFor(n), face: p.face, index: p.index })
   }
   return out
 }
 
 // Polygons, back to front, for the puzzle with one layer turned by `angle` radians.
 // `color` is a sticker code, or null for the exposed inner plastic.
-export function getTurnPolygons(state, vertex, layer, angle) {
+export function getTurnPolygons(state, vertex, layer, angle, view = DEFAULT_VIEW) {
   const { axis, inLayer, cut } = layerOf(vertex, layer)
   const body = [{ pts: cut, normal: axis, color: null }]
   const chunk = [{ pts: cut.map(p => rotateAbout(p, axis, angle)), normal: scale(axis, -1), color: null }]
@@ -130,9 +133,26 @@ export function getTurnPolygons(state, vertex, layer, angle) {
       body.push({ ...base, pts: s.pts, normal: FACE_NORMAL[s.face] })
     }
   }
-  const chunkInFront = toView(axis)[2] < 0
+  const chunkInFront = toView(axis, view)[2] < 0
   const [first, second] = chunkInFront ? [body, chunk] : [chunk, body]
-  return [...visiblePolys(first), ...visiblePolys(second)]
+  return [...visiblePolys(first, view), ...visiblePolys(second, view)]
+}
+
+// 2D point just beyond a corner, for placing a label.
+export function getCornerLabelPoint(vertex, view = DEFAULT_VIEW) {
+  return to2d(toView(scale(V[vertex], 1.22), view))
+}
+
+// 2D bounds of the whole puzzle from this view.
+export function getViewBounds(view = DEFAULT_VIEW) {
+  const pts = Object.values(V).map(p => to2d(toView(p, view)))
+  const xs = pts.map(p => p.x), ys = pts.map(p => p.y)
+  return { minX: Math.min(...xs), maxX: Math.max(...xs), minY: Math.min(...ys), maxY: Math.max(...ys) }
+}
+
+// Polygons, back to front, for the puzzle at rest.
+export function getPuzzlePolygons(state, view = DEFAULT_VIEW) {
+  return getTurnPolygons(state, 'apex', 'tip', 0, view)
 }
 
 function hull(points) {
@@ -151,33 +171,49 @@ function hull(points) {
 }
 
 // Outline of a corner layer's stickers on the faces facing the viewer.
-export function getLayerOutline(vertex, layer) {
+export function getLayerOutline(vertex, layer, view = DEFAULT_VIEW) {
   const f = LAYER_DEPTH[layer]
   const pts = [V[vertex]]
   for (const [face, keys] of Object.entries(FACE_KEYS)) {
-    if (!keys.includes(vertex) || toView(FACE_NORMAL[face])[2] >= 0) continue
+    if (!keys.includes(vertex) || toView(FACE_NORMAL[face], view)[2] >= 0) continue
     for (const k of keys) if (k !== vertex) pts.push(lerp(V[vertex], V[k], f))
   }
-  return hull(pts.map(p => to2d(toView(p))))
+  return hull(pts.map(p => to2d(toView(p, view))))
+}
+
+// Outline of the band below the top corner's layer (the bottom third) across the side faces in view.
+export function getBottomBandOutline(view = DEFAULT_VIEW) {
+  const sides = Object.entries(FACE_KEYS)
+    .filter(([face, keys]) => keys.includes('apex') && toView(FACE_NORMAL[face], view)[2] < 0)
+    .map(([, keys]) => keys.filter(k => k !== 'apex'))
+  if (!sides.length) return []
+  let chain = sides[0]
+  if (sides.length > 1) {
+    const shared = sides[0].find(k => sides[1].includes(k))
+    chain = [sides[0].find(k => k !== shared), shared, sides[1].find(k => k !== shared)]
+  }
+  const cut = (k) => lerp(V.apex, V[k], 2 / 3)
+  const pts = [...chain.map(k => V[k]), ...[...chain].reverse().map(cut)]
+  return pts.map(p => to2d(toView(p, view)))
 }
 
 // Outline around a group of stickers on one face, in their resting positions.
-export function getStickerGroupOutline(face, indices) {
+export function getStickerGroupOutline(face, indices, view = DEFAULT_VIEW) {
   const pts = STICKERS
     .filter(s => s.face === face && indices.includes(s.index))
     .flatMap(s => s.pts)
-  return hull(pts.map(p => to2d(toView(p))))
+  return hull(pts.map(p => to2d(toView(p, view))))
 }
 
 // Arrow along the front of a ring just beyond the turning vertex, pointing the way the layer turns.
-export function getTurnArrow(vertex, dir) {
+export function getTurnArrow(vertex, dir, view = DEFAULT_VIEW) {
   const axis = unit(V[vertex])
   const center = scale(axis, VERT_R + 14)
   const helper = Math.abs(axis[1]) < 0.9 ? [0, 1, 0] : [1, 0, 0]
   const e1 = unit(cross(helper, axis))
   const e2 = cross(axis, e1)
   const rho = 24
-  const at = (t) => toView(add(center, add(scale(e1, rho * Math.cos(t)), scale(e2, rho * Math.sin(t)))))
+  const at = (t) => toView(add(center, add(scale(e1, rho * Math.cos(t)), scale(e2, rho * Math.sin(t)))), view)
   let front = 0, minZ = Infinity
   for (let deg = 0; deg < 360; deg += 2) {
     const z = at(deg * Math.PI / 180)[2]

@@ -11,9 +11,9 @@ export default function AlgorithmCard({ algorithm, puzzleType, dimensions }) {
             dimensions={dimensions}
             state={algorithm.setupState}
             highlights={algorithm.highlights}
-            size={160}
-            turn={algorithm.turn}
-            outline={algorithm.outline}
+            size={180}
+            animation={algorithm.animation}
+            view={algorithm.view}
           />
         </div>
         <div className="flex-1 min-w-0">
