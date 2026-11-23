@@ -7,8 +7,7 @@ import MoveSequence from '../components/notation/MoveSequence'
 import { createSolvedState, createPyraminxSolvedState } from '../lib/cubeState'
 import { getMethod } from '../data/methods'
 import AlgorithmCard from '../components/content/AlgorithmCard'
-import { PYRAMINX_SCRAMBLE } from '../data/methods/pyraminx'
-import PyraminxNotation from '../components/content/PyraminxNotation'
+import PuzzleNotation from '../components/content/PuzzleNotation'
 import { withEmphasis } from '../lib/emphasis'
 import SubStepLabel from '../components/content/SubStepLabel'
 
@@ -41,10 +40,8 @@ export default function PuzzlePage() {
     )
   }
 
-  const state = puzzle.type === 'pyraminx'
-    ? PYRAMINX_SCRAMBLE
-    : createSolvedState(puzzle.dimensions)
   const method = getMethod(puzzleSlug)
+  const state = method?.previewState ?? createSolvedState(puzzle.dimensions)
 
   return (
     <div>
@@ -71,9 +68,9 @@ export default function PuzzlePage() {
         </div>
       </div>
 
-      {puzzle.type === 'pyraminx' && <PyraminxNotation />}
+      {method?.notation && <PuzzleNotation puzzleType={puzzle.type} notation={method.notation} />}
 
-      {notation && puzzle.type !== 'pyraminx' && (
+      {notation && !method?.notation && (
         <section className="mb-10">
           <h2 className="text-xl font-semibold text-text-primary mb-4">Notation</h2>
           <div className="space-y-4">
@@ -182,6 +179,8 @@ export default function PuzzlePage() {
                           dimensions={puzzle.dimensions}
                           state={stage.closing.figure.state}
                           bottomBand={stage.closing.figure.bottomBand}
+                          animation={stage.closing.figure.animation}
+                          view={stage.closing.figure.view}
                           size={180}
                         />
                         <Caption label={nextLabel()}>{stage.closing.figure.caption}</Caption>

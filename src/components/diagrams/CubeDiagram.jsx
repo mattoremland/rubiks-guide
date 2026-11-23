@@ -1,5 +1,6 @@
 import IsoCube from './IsoCube'
 import IsoPyraminx from './IsoPyraminx'
+import IsoCube3D from './IsoCube3D'
 
 export default function CubeDiagram({
   puzzleType,
@@ -29,6 +30,14 @@ export default function CubeDiagram({
           groups={groups}
           labels={labels}
         />
+      </div>
+    )
+  }
+
+  if (puzzleType === 'cube') {
+    return (
+      <div className="flex items-center justify-center">
+        <IsoCube3D state={state} size={size} animation={animation} view={view} groups={groups} labels={labels} />
       </div>
     )
   }

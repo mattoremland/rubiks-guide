@@ -83,6 +83,8 @@ export const pyraminxNotation = {
 
 export const pyraminxMethod = {
   name: "Beginner's Method",
+  notation: pyraminxNotation,
+  previewState: PYRAMINX_SCRAMBLE,
   description:
     'A simple layer-by-layer approach to solving the Pyraminx — tips first, then centers, then edges.',
   stages: [

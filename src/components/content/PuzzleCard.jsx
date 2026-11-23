@@ -1,14 +1,12 @@
 import { Link } from 'react-router-dom'
 import CubeDiagram from '../diagrams/CubeDiagram'
 import { createSolvedState } from '../../lib/cubeState'
-import { PYRAMINX_SCRAMBLE } from '../../data/methods/pyraminx'
+import { getMethod } from '../../data/methods'
 
 const difficultyLabels = ['', 'Easy', 'Easy', 'Medium', 'Medium', 'Hard', 'Expert']
 
 export default function PuzzleCard({ puzzle }) {
-  const state = puzzle.type === 'pyraminx'
-    ? PYRAMINX_SCRAMBLE
-    : createSolvedState(puzzle.dimensions)
+  const state = getMethod(puzzle.slug)?.previewState ?? createSolvedState(puzzle.dimensions)
 
   return (
     <Link
