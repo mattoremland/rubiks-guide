@@ -31,7 +31,7 @@ export const notations = {
       { label: 'Rotations', moves: ['x', 'y', 'z'] },
     ],
   },
-  '2x3x3': {
+  '3x3x2': {
     faces: ['R', 'L', 'U', 'D', 'F', 'B'],
     modifiers: { "'": 'counterclockwise', '2': '180°' },
     rotations: ['x', 'y', 'z'],

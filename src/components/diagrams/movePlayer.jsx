@@ -10,8 +10,8 @@ const easeInOut = (t) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) 
 // Ordered phases of one play-through. Each has a duration, the move it belongs to
 // (moves.length = finished), and what it animates: 'spin' turns that move, 'outlineIn' /
 // 'outlineOut' fade the outline of the layer about to turn, 'highlightIn' fades in the end
-// highlight, and for looping animations 'fadeOut' / 'fadeIn' restart from the beginning.
-function buildTimeline(moveCount, outlineMoves, withHighlight, loop, firstRest) {
+// highlight, and 'fadeOut' / 'fadeIn' return to the beginning.
+function buildTimeline(moveCount, outlineMoves, withHighlight, firstRest) {
   const single = moveCount === 1
   // long sequences (e.g. a trigger repeated three times) move along faster
   const long = moveCount > 4
@@ -29,11 +29,11 @@ function buildTimeline(moveCount, outlineMoves, withHighlight, loop, firstRest) 
     phases.push({ k: moveCount, kind: 'rest', ms: 450 })
     phases.push({ k: moveCount, kind: 'highlightIn', ms: 350 })
   }
-  if (loop) {
-    phases.push({ k: moveCount, kind: 'rest', ms: withHighlight ? 2000 : 1500 })
-    phases.push({ k: moveCount, kind: 'fadeOut', ms: 350 })
-    phases.push({ k: 0, kind: 'fadeIn', ms: 350 })
-  }
+  // hold the end position, then fade back to the start (looping animations then play again;
+  // the others wait on the starting frame for Replay)
+  phases.push({ k: moveCount, kind: 'rest', ms: withHighlight ? 2000 : 1500 })
+  phases.push({ k: moveCount, kind: 'fadeOut', ms: 350 })
+  phases.push({ k: 0, kind: 'fadeIn', ms: 350 })
   return phases
 }
 
@@ -41,7 +41,7 @@ function buildTimeline(moveCount, outlineMoves, withHighlight, loop, firstRest) 
 const START_FRAME = { k: 0, angle: 0, outline: 0, highlight: 0, opacity: 1, before: 1 }
 
 // `angles[k]` is the full turn angle of move k, in radians.
-function frameAt(phases, t, angles, withHighlight) {
+function frameAt(phases, t, angles) {
   const highlightAt = phases.findIndex(q => q.kind === 'highlightIn')
   const firstSpin = phases.findIndex(q => q.kind === 'spin')
   let start = 0
@@ -62,18 +62,18 @@ function frameAt(phases, t, angles, withHighlight) {
     }
     start += p.ms
   }
-  return { k: angles.length, angle: 0, outline: 0, highlight: withHighlight ? 1 : 0, opacity: 1, before: 0 }
+  return START_FRAME
 }
 
-// Plays the moves once each time `play` is called, then holds the final position;
+// Plays the moves once each time `play` is called, then returns to the starting position;
 // with `animation.loop` it repeats forever once started. `angles` must be memoized.
 export function useMovePlayer(animation, angles) {
   const withHighlight = !!animation?.highlightAfter
   const loop = !!animation?.loop
   const phases = useMemo(
     // hold longer on the starting position when it is highlighted
-    () => angles && buildTimeline(angles.length, !!animation.outlineMoves, withHighlight, loop, animation.highlightBefore ? 2000 : undefined),
-    [angles, animation, withHighlight, loop],
+    () => angles && buildTimeline(angles.length, !!animation.outlineMoves, withHighlight, animation.highlightBefore ? 2000 : undefined),
+    [angles, animation, withHighlight],
   )
   const [frame, setFrame] = useState(START_FRAME)
   const [playCount, setPlayCount] = useState(0)
@@ -87,7 +87,7 @@ export function useMovePlayer(animation, angles) {
     setPlaying(true)
     const tick = (now) => {
       const t = loop ? (now - start) % total : now - start
-      setFrame(frameAt(phases, t, angles, withHighlight))
+      setFrame(frameAt(phases, t, angles))
       if (loop || t < total) raf = requestAnimationFrame(tick)
       else setPlaying(false)
     }

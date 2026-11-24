@@ -1,7 +1,8 @@
 import { useMemo, useRef } from 'react'
 import {
   applyMove, parseAlg, moveAngle, getTurnPolygons, getCubePolygons, getMoveArrow, getMoveOutlineEdges, getPieceEdges,
-  getStickerGroupOutline, getStickerFacingArrow, getViewBounds, getFaceLabelPoint, getHiddenFaceLabel, isFaceVisible, DEFAULT_CUBE_VIEW,
+  getStickerGroupOutline, getStickerFacingArrow, getViewBounds, getFaceLabelPoint, getHiddenFaceLabel, isFaceVisible, dimsOf,
+  DEFAULT_CUBE_VIEW,
 } from '../../lib/cube3d'
 import {
   useMovePlayer, useFirstVisible, Polygons, TurnArrow, ReplayButton, ptsStr, glow, shadow, growBox, viewBoxOf,
@@ -29,6 +30,34 @@ function BoxEdges({ edges, color = '#FFFFFF', hidden = true }) {
   ))
 }
 
+// Stickers on a hidden face, shown faintly through the cube with an arrow for the way they face.
+function Ghost({ dims, group, view, state, color, opacity = 1 }) {
+  const arrowPts = getStickerFacingArrow(dims, group.face, group.indices, view)
+  return (
+    <g opacity={opacity}>
+      <polygon
+        points={ptsStr(getStickerGroupOutline(dims, group.face, group.indices, view))}
+        fill={getStickerColor(state[group.face][group.indices[0]])}
+        fillOpacity={0.6}
+        stroke={color}
+        strokeOpacity={0.6}
+        strokeWidth={1.5}
+        strokeLinejoin="round"
+      />
+      <line
+        x1={arrowPts.from.x}
+        y1={arrowPts.from.y}
+        x2={arrowPts.to.x}
+        y2={arrowPts.to.y}
+        stroke={color}
+        strokeOpacity={0.6}
+        strokeWidth={2}
+        markerEnd="url(#facing-arrowhead)"
+      />
+    </g>
+  )
+}
+
 // `animation`: { alg: "R U R' U'", outlineMoves?, loop?, highlightBefore?, highlightAfter?: [{ face, indices }] } plays the
 // moves from `state` (once when first scrolled into view, then on Replay, or looping with `loop`).
 // `view`: { x, y } camera angles in degrees. `groups`: [{ face, indices }] outlines stickers;
@@ -37,8 +66,12 @@ function BoxEdges({ edges, color = '#FFFFFF', hidden = true }) {
 export default function IsoCube3D({ state, size = 200, animation, view, groups, labels, pieces, highlightColor }) {
   const v = view ?? DEFAULT_CUBE_VIEW
   const hl = highlightColor ?? animation?.highlightColor ?? '#FFFFFF'
-  const n = Math.round(Math.sqrt(state.U.length))
-  const moves = useMemo(() => animation && parseAlg(animation.alg), [animation])
+  // piece counts { x, y, z }; kept stable between redraws so animations don't restart
+  const shape = dimsOf(state)
+  const dimsKey = `${shape.x}x${shape.y}x${shape.z}`
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const dims = useMemo(() => shape, [dimsKey])
+  const moves = useMemo(() => animation && parseAlg(animation.alg, dims), [animation, dims])
   const angles = useMemo(() => moves?.map(moveAngle), [moves])
   const { frame, playing, played, play } = useMovePlayer(animation, angles)
   const wrapper = useRef(null)
@@ -51,25 +84,25 @@ export default function IsoCube3D({ state, size = 200, animation, view, groups, 
     return list
   }, [state, moves])
 
-  const arrows = useMemo(() => moves?.map(m => getMoveArrow(m, v)) ?? [], [moves, v])
+  const arrows = useMemo(() => moves?.map(m => getMoveArrow(m, v, dims)) ?? [], [moves, v, dims])
 
-  const b = getViewBounds(v)
+  const b = getViewBounds(v, dims)
   const box = { minX: b.minX - PAD, minY: b.minY - PAD, maxX: b.maxX + PAD, maxY: b.maxY + PAD }
   for (const a of arrows) growBox(box, a.bounds, ARROW_PAD)
   // visible faces are labeled in place; hidden ones get a label outside the cube with a pointer
   const labelPoints = labels
     ? Object.entries(labels).map(([face, text]) => {
-      if (isFaceVisible(face, v)) return { text, ...getFaceLabelPoint(face, v) }
+      if (isFaceVisible(face, v)) return { text, ...getFaceLabelPoint(face, v, dims) }
       // keep the label away from the head of the first turn arrow
       const side = arrows[0] && (arrows[0].end.x > 0 ? 'left' : 'right')
-      const h = getHiddenFaceLabel(face, v, side)
+      const h = getHiddenFaceLabel(face, v, side, dims)
       return { text, ...h.text, pointer: { from: h.from, to: h.to } }
     })
     : []
   for (const p of labelPoints) growBox(box, { minX: p.x, maxX: p.x, minY: p.y, maxY: p.y }, 16)
-  for (const g of groups ?? []) {
+  for (const g of [...(groups ?? []), ...(animation?.highlightBefore ?? [])]) {
     if (isFaceVisible(g.face, v)) continue
-    const { to } = getStickerFacingArrow(n, g.face, g.indices, v)
+    const { to } = getStickerFacingArrow(dims, g.face, g.indices, v)
     growBox(box, { minX: to.x, maxX: to.x, minY: to.y, maxY: to.y }, 10)
   }
 
@@ -91,13 +124,13 @@ export default function IsoCube3D({ state, size = 200, animation, view, groups, 
         <Polygons polys={polys} strokeWidth={1.5} />
         {currentMove && frame.outline > 0 && (
           <g opacity={frame.outline}>
-            <BoxEdges edges={getMoveOutlineEdges(n, currentMove, v)} />
+            <BoxEdges edges={getMoveOutlineEdges(dims, currentMove, v)} />
           </g>
         )}
         {animation?.highlightBefore && frame.before > 0 && animation.highlightBefore.filter(g => isFaceVisible(g.face, v)).map((g, i) => (
           <polygon
             key={`before-${i}`}
-            points={ptsStr(getStickerGroupOutline(n, g.face, g.indices, v))}
+            points={ptsStr(getStickerGroupOutline(dims, g.face, g.indices, v))}
             fill={hl}
             fillOpacity={0.15}
             stroke={hl}
@@ -106,10 +139,14 @@ export default function IsoCube3D({ state, size = 200, animation, view, groups, 
             style={glow}
           />
         ))}
+        {/* before-highlights on hidden faces flash faintly through the cube, like ghost groups */}
+        {animation?.highlightBefore && frame.before > 0 && animation.highlightBefore.filter(g => !isFaceVisible(g.face, v)).map((g, i) => (
+          <Ghost key={`before-ghost-${i}`} dims={dims} group={g} view={v} state={state} color={hl} opacity={frame.before} />
+        ))}
         {animation?.highlightAfter && frame.highlight > 0 && animation.highlightAfter.filter(g => isFaceVisible(g.face, v)).map((g, i) => (
           <polygon
             key={i}
-            points={ptsStr(getStickerGroupOutline(n, g.face, g.indices, v))}
+            points={ptsStr(getStickerGroupOutline(dims, g.face, g.indices, v))}
             fill={hl}
             fillOpacity={0.15}
             stroke={hl}
@@ -120,35 +157,12 @@ export default function IsoCube3D({ state, size = 200, animation, view, groups, 
           />
         ))}
       </g>
-      {pieces?.map((at, i) => <BoxEdges key={`piece-${i}`} edges={getPieceEdges(n, at, v)} color={hl} hidden={false} />)}
+      {pieces?.map((at, i) => <BoxEdges key={`piece-${i}`} edges={getPieceEdges(dims, at, v)} color={hl} hidden={false} />)}
       {/* stickers on hidden faces show faintly through the cube, with an arrow for the way they face */}
-      {groups?.filter(g => !isFaceVisible(g.face, v)).map((g, i) => {
-        const arrowPts = getStickerFacingArrow(n, g.face, g.indices, v)
-        return (
-          <g key={`ghost-${i}`}>
-            <polygon
-              points={ptsStr(getStickerGroupOutline(n, g.face, g.indices, v))}
-              fill={getStickerColor(state[g.face][g.indices[0]])}
-              fillOpacity={0.6}
-              stroke={hl}
-              strokeOpacity={0.6}
-              strokeWidth={1.5}
-              strokeLinejoin="round"
-            />
-            <line
-              x1={arrowPts.from.x}
-              y1={arrowPts.from.y}
-              x2={arrowPts.to.x}
-              y2={arrowPts.to.y}
-              stroke={hl}
-              strokeOpacity={0.6}
-              strokeWidth={2}
-              markerEnd="url(#facing-arrowhead)"
-            />
-          </g>
-        )
-      })}
-      {groups?.some(g => !isFaceVisible(g.face, v)) && (
+      {groups?.filter(g => !isFaceVisible(g.face, v)).map((g, i) => (
+        <Ghost key={`ghost-${i}`} dims={dims} group={g} view={v} state={state} color={hl} />
+      ))}
+      {[...(groups ?? []), ...(animation?.highlightBefore ?? [])].some(g => !isFaceVisible(g.face, v)) && (
         <defs>
           <marker id="facing-arrowhead" markerWidth="7" markerHeight="6" refX="5" refY="3" orient="auto">
             <polygon points="0,0 7,3 0,6" fill={hl} fillOpacity={0.6} />
@@ -158,7 +172,7 @@ export default function IsoCube3D({ state, size = 200, animation, view, groups, 
       {groups?.filter(g => isFaceVisible(g.face, v)).map((g, i) => (
         <polygon
           key={i}
-          points={ptsStr(getStickerGroupOutline(n, g.face, g.indices, v))}
+          points={ptsStr(getStickerGroupOutline(dims, g.face, g.indices, v))}
           fill="none"
           stroke={hl}
           strokeWidth={2.5}

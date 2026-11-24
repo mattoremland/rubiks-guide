@@ -7,9 +7,12 @@ const SCRAMBLE = "R U2 F' R2 U' F U R' F2 U2 R F'"
 // Drag (or type) to choose a camera angle for cube diagrams.
 export default function DevCubePage() {
   const [view, setView] = useState(DEFAULT_CUBE_VIEW)
-  const [n, setN] = useState(2)
+  const [shape, setShape] = useState('2x2x2')
   const dragging = useRef(null)
-  const state = useMemo(() => applyAlg(solvedState(n), SCRAMBLE), [n])
+  const state = useMemo(() => {
+    const [x, y, z] = shape.split('x').map(Number)
+    return applyAlg(solvedState({ x, y, z }), SCRAMBLE)
+  }, [shape])
 
   const onPointerDown = useCallback((e) => {
     dragging.current = { x: e.clientX, y: e.clientY }
@@ -56,15 +59,16 @@ export default function DevCubePage() {
         <div className="space-y-4 text-sm">
           <div className="flex items-center gap-4 font-mono text-text-secondary">{field('x')}{field('y')}</div>
           <div className="flex items-center gap-2 text-text-secondary">
-            Cube size:
-            {[2, 3, 4, 5].map(k => (
+            Puzzle:
+            {/* width x height x depth */}
+            {['2x2x2', '3x2x3', '3x3x3', '4x4x4', '5x5x5'].map(k => (
               <button
                 key={k}
                 type="button"
-                onClick={() => setN(k)}
-                className={`px-2 py-1 rounded border border-border ${k === n ? 'bg-accent text-white' : 'hover:bg-surface-hover'}`}
+                onClick={() => setShape(k)}
+                className={`px-2 py-1 rounded border border-border ${k === shape ? 'bg-accent text-white' : 'hover:bg-surface-hover'}`}
               >
-                {k}x{k}
+                {k === '3x2x3' ? '3x3x2' : k}
               </button>
             ))}
           </div>

@@ -27,10 +27,11 @@ export const puzzles = [
     pieceCount: 12,
   },
   {
-    slug: '2x3x3',
-    name: '2x3x3',
+    slug: '3x3x2',
+    name: '3x3x2',
     type: 'cuboid',
-    dimensions: { x: 3, y: 3, z: 2 },
+    // 3 wide, 2 tall, 3 deep
+    dimensions: { x: 3, y: 2, z: 3 },
     description: 'A domino cuboid — wider and shorter.',
     difficulty: 3,
     pieceCount: 18,

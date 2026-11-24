@@ -36,7 +36,7 @@ export default function CubeDiagram({
     )
   }
 
-  if (puzzleType === 'cube') {
+  if (puzzleType === 'cube' || puzzleType === 'cuboid') {
     return (
       <div className="flex items-center justify-center">
         <IsoCube3D state={state} size={size} animation={animation} view={view} groups={groups} labels={labels} pieces={pieces} highlightColor={highlightColor} />

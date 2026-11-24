@@ -177,19 +177,23 @@ export default function PuzzlePage() {
                     {stage.closing.text && (
                       <p className="text-text-secondary text-sm mb-4">{withEmphasis(stage.closing.text)}</p>
                     )}
-                    {stage.closing.figure && (
-                      <figure className="flex flex-col items-center gap-2">
+                    {(stage.closing.figures ?? (stage.closing.figure ? [stage.closing.figure] : [])).map((fig, i) => (
+                      <figure key={i} className="flex flex-col items-center gap-2 mb-4">
                         <CubeDiagram
                           puzzleType={puzzle.type}
                           dimensions={puzzle.dimensions}
-                          state={stage.closing.figure.state}
-                          bottomBand={stage.closing.figure.bottomBand}
-                          animation={stage.closing.figure.animation}
-                          view={stage.closing.figure.view}
-                          size={180}
+                          state={fig.state}
+                          bottomBand={fig.bottomBand}
+                          animation={fig.animation}
+                          view={fig.view}
+                          groups={fig.groups}
+                          size={fig.animation ? 180 : 160}
                         />
-                        <Caption label={nextLabel()}>{stage.closing.figure.caption}</Caption>
+                        <Caption label={nextLabel()}>{withEmphasis(fig.caption)}</Caption>
                       </figure>
+                    ))}
+                    {stage.closing.textAfter && (
+                      <p className="text-text-secondary text-sm mt-4">{withEmphasis(stage.closing.textAfter)}</p>
                     )}
                   </div>
                 )}

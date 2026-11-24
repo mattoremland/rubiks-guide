@@ -1,17 +1,20 @@
-// 3D model, move simulator and projection for NxNxN cubes.
+// 3D model, move simulator and projection for cubes and cuboids (e.g. 2x2x2, 3x3x2).
 // Model axes: x right, y up, z toward the viewer (front). The camera looks along -z with x to the
 // right, so the drawing is not mirrored: a clockwise move looks clockwise on screen.
+// Shapes are { x, y, z } piece counts (width, height, depth). Every piece is the same size, and the
+// longest side spans -1..1.
 
 const FACES = {
-  // normal, top-left corner of the face as you look at it, then "right" and "down" along the face
-  U: { n: [0, 1, 0], o: [-1, 1, -1], right: [1, 0, 0], down: [0, 0, 1] },
-  D: { n: [0, -1, 0], o: [-1, -1, 1], right: [1, 0, 0], down: [0, 0, -1] },
-  F: { n: [0, 0, 1], o: [-1, 1, 1], right: [1, 0, 0], down: [0, -1, 0] },
-  B: { n: [0, 0, -1], o: [1, 1, -1], right: [-1, 0, 0], down: [0, -1, 0] },
-  R: { n: [1, 0, 0], o: [1, 1, 1], right: [0, 0, -1], down: [0, -1, 0] },
-  L: { n: [-1, 0, 0], o: [-1, 1, -1], right: [0, 0, 1], down: [0, -1, 0] },
+  // normal, top-left corner of the face as you look at it (as signs), then "right" and "down" along it
+  U: { n: [0, 1, 0], o: [-1, 1, -1], right: [1, 0, 0], down: [0, 0, 1], cols: 'x', rows: 'z' },
+  D: { n: [0, -1, 0], o: [-1, -1, 1], right: [1, 0, 0], down: [0, 0, -1], cols: 'x', rows: 'z' },
+  F: { n: [0, 0, 1], o: [-1, 1, 1], right: [1, 0, 0], down: [0, -1, 0], cols: 'x', rows: 'y' },
+  B: { n: [0, 0, -1], o: [1, 1, -1], right: [-1, 0, 0], down: [0, -1, 0], cols: 'x', rows: 'y' },
+  R: { n: [1, 0, 0], o: [1, 1, 1], right: [0, 0, -1], down: [0, -1, 0], cols: 'z', rows: 'y' },
+  L: { n: [-1, 0, 0], o: [-1, 1, -1], right: [0, 0, 1], down: [0, -1, 0], cols: 'z', rows: 'y' },
 }
 const ROTATION_AXIS = { x: 'R', y: 'U', z: 'F' }
+const AXES = ['x', 'y', 'z']
 
 export const DEFAULT_CUBE_VIEW = { x: 25, y: 35 }
 export const SOLVED_COLORS = { U: 'W', D: 'Y', F: 'G', B: 'B', R: 'R', L: 'O' }
@@ -20,6 +23,7 @@ const SIZE_PX = 100
 const add = (a, b) => a.map((x, i) => x + b[i])
 const sub = (a, b) => a.map((x, i) => x - b[i])
 const scale = (a, s) => a.map(x => x * s)
+const mul = (a, b) => a.map((x, i) => x * b[i])
 const dot = (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2]
 const cross = (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]]
 const unit = (a) => scale(a, 1 / Math.hypot(...a))
@@ -41,35 +45,65 @@ function shadeFor(viewNormal) {
   return 0.68 + 0.32 * Math.max(0, dot(unit(viewNormal), l))
 }
 
+// A shape as { x, y, z } piece counts; a plain number n means an n x n x n cube.
+const toDims = (d) => (typeof d === 'number' ? { x: d, y: d, z: d } : d)
+
+// Piece counts of a sticker state, from the sizes of its U, F and R faces.
+export function dimsOf(state) {
+  const a = state.U.length, b = state.F.length, c = state.R.length
+  const x = Math.round(Math.sqrt(a * b / c))
+  return { x, y: Math.round(b / x), z: Math.round(a / x) }
+}
+
 const models = {}
 
-// Stickers in model units: the cube spans -1..1 on every axis.
-function model(n) {
-  if (models[n]) return models[n]
-  const step = 2 / n
+function model(dimsIn) {
+  const dims = toDims(dimsIn)
+  const key = `${dims.x}x${dims.y}x${dims.z}`
+  if (models[key]) return models[key]
+  const step = 2 / Math.max(dims.x, dims.y, dims.z)
+  const half = AXES.map(a => dims[a] * step / 2)
   const stickers = []
   for (const [face, f] of Object.entries(FACES)) {
-    for (let r = 0; r < n; r++) {
-      for (let c = 0; c < n; c++) {
-        const at = (dr, dc) => add(f.o, add(scale(f.right, (c + dc) * step), scale(f.down, (r + dr) * step)))
+    const cols = dims[f.cols], rows = dims[f.rows]
+    const o = mul(f.o, half)
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
+        const at = (dr, dc) => add(o, add(scale(f.right, (c + dc) * step), scale(f.down, (r + dr) * step)))
         const pts = [at(0, 0), at(0, 1), at(1, 1), at(1, 0)]
-        stickers.push({ face, index: r * n + c, pts, centroid: scale(pts.reduce(add), 1 / 4) })
+        stickers.push({ face, index: r * cols + c, pts, centroid: scale(pts.reduce(add), 1 / 4) })
       }
     }
   }
-  models[n] = { n, step, stickers }
-  return models[n]
+  models[key] = { dims, step, half, stickers }
+  return models[key]
 }
 
-export function solvedState(n) {
-  return Object.fromEntries(Object.entries(SOLVED_COLORS).map(([f, c]) => [f, Array(n * n).fill(c)]))
+export function solvedState(dimsIn) {
+  const dims = toDims(dimsIn)
+  return Object.fromEntries(Object.entries(SOLVED_COLORS).map(([f, c]) => [f, Array(dims[FACES[f].cols] * dims[FACES[f].rows]).fill(c)]))
 }
+
+const axisIndex = (axis) => axis.findIndex(v => v !== 0)
+
+// Whether a layer turning about this axis can stop at a quarter turn (its cross-section is square).
+function quarterTurns(dims, axis) {
+  const [a, b] = AXES.filter((_, k) => k !== axisIndex(axis))
+  return dims[a] === dims[b]
+}
+
+const faceAxis = (face) => FACES[ROTATION_AXIS[face] ?? face].n
 
 // "R U R' U2 x2'" -> [{ face: 'R', turns: 1 }, ...]; turns: 1 clockwise, -1 counterclockwise,
 // 2 half turn clockwise, -2 half turn counterclockwise (same result, opposite direction on screen).
-export function parseAlg(alg) {
+// With `dims`, a face that can only make half turns (like R on a 3x3x2) turns 180° for R and R'.
+export function parseAlg(alg, dims) {
   const TURNS = { '': 1, "'": -1, 2: 2, "2'": -2 }
-  return [...alg.matchAll(/([RLUDFBxyz])(2'|2|')?/g)].map(([, face, mod]) => ({ face, turns: TURNS[mod ?? ''] }))
+  return [...alg.matchAll(/([RLUDFBxyz])(2'|2|')?/g)].map(([, face, mod]) => {
+    let turns = TURNS[mod ?? '']
+    if (dims && Math.abs(turns) === 1 && !quarterTurns(toDims(dims), faceAxis(face))) turns *= 2
+    return { face, turns }
+  })
 }
 
 export const moveName = (m) => m.face + ({ 1: '', [-1]: "'", 2: '2', [-2]: "2'" })[m.turns]
@@ -77,19 +111,19 @@ export const moveName = (m) => m.face + ({ 1: '', [-1]: "'", 2: '2', [-2]: "2'" 
 // Clockwise, seen from outside the face, is a negative rotation about its outward normal.
 export const moveAngle = (m) => -m.turns * Math.PI / 2
 
-function layerOf(n, move) {
-  const { step } = model(n)
-  const faceKey = ROTATION_AXIS[move.face] ?? move.face
-  const axis = FACES[faceKey].n
+function layerOf(dims, move) {
+  const { step, half } = model(dims)
+  const axis = faceAxis(move.face)
   const whole = move.face in ROTATION_AXIS
-  const cutAt = 1 - step
-  return { axis, whole, cutAt, inLayer: (s) => whole || dot(s.centroid, axis) > cutAt + 1e-9 }
+  const extent = half[axisIndex(axis)]
+  const cutAt = extent - step
+  return { axis, whole, extent, cutAt, inLayer: (s) => whole || dot(s.centroid, axis) > cutAt + 1e-9 }
 }
 
 export function applyMove(state, move) {
-  const n = Math.round(Math.sqrt(state.U.length))
-  const { stickers } = model(n)
-  const { axis, inLayer } = layerOf(n, move)
+  const dims = dimsOf(state)
+  const { stickers } = model(dims)
+  const { axis, inLayer } = layerOf(dims, move)
   const angle = moveAngle(move)
   const next = Object.fromEntries(Object.entries(state).map(([k, v]) => [k, [...v]]))
   for (const s of stickers) {
@@ -105,19 +139,20 @@ export function applyMove(state, move) {
   return next
 }
 
-export const applyAlg = (state, alg) => parseAlg(alg).reduce(applyMove, state)
+export const applyAlg = (state, alg) => parseAlg(alg, dimsOf(state)).reduce(applyMove, state)
 
 const to2d = (p) => ({ x: p[0] * SIZE_PX / 2, y: -p[1] * SIZE_PX / 2 })
 
-// The square where a turning layer separates from the rest of the cube.
-function cutSquare(axis, at) {
-  const i = axis.findIndex(v => v !== 0)
+// The rectangle where a turning layer separates from the rest of the puzzle.
+function cutRect(dims, axis, at) {
+  const { half } = model(dims)
+  const i = axisIndex(axis)
   const [a, b] = [0, 1, 2].filter(k => k !== i)
   return [[-1, -1], [1, -1], [1, 1], [-1, 1]].map(([u, v]) => {
     const p = [0, 0, 0]
     p[i] = axis[i] * at
-    p[a] = u
-    p[b] = v
+    p[a] = u * half[a]
+    p[b] = v * half[b]
     return p
   })
 }
@@ -132,17 +167,17 @@ function visiblePolys(polys, view) {
   return out
 }
 
-// Polygons, back to front, for the cube with one move part-way through (`angle` radians).
-// `color` is a sticker code, or null for the exposed inside of the cube.
+// Polygons, back to front, for the puzzle with one move part-way through (`angle` radians).
+// `color` is a sticker code, or null for the exposed inside of the puzzle.
 export function getTurnPolygons(state, move, angle, view = DEFAULT_CUBE_VIEW) {
-  const n = Math.round(Math.sqrt(state.U.length))
-  const { stickers } = model(n)
-  const { axis, whole, cutAt, inLayer } = move ? layerOf(n, move) : { whole: true, inLayer: () => true }
+  const dims = dimsOf(state)
+  const { stickers } = model(dims)
+  const { axis, whole, cutAt, inLayer } = move ? layerOf(dims, move) : { whole: true, inLayer: () => true }
   const body = []
   const layer = []
   if (move && !whole) {
-    body.push({ pts: cutSquare(axis, cutAt), normal: axis, color: null })
-    layer.push({ pts: cutSquare(axis, cutAt).map(p => rotateAbout(p, axis, angle)), normal: scale(axis, -1), color: null })
+    body.push({ pts: cutRect(dims, axis, cutAt), normal: axis, color: null })
+    layer.push({ pts: cutRect(dims, axis, cutAt).map(p => rotateAbout(p, axis, angle)), normal: scale(axis, -1), color: null })
   }
   for (const s of stickers) {
     const base = { face: s.face, index: s.index, color: state[s.face][s.index] }
@@ -172,12 +207,16 @@ function hull(points) {
   return [...build(pts), ...build([...pts].reverse())]
 }
 
-const CUBE_CORNERS = [-1, 1].flatMap(x => [-1, 1].flatMap(y => [-1, 1].map(z => [x, y, z])))
+const boxCorners = (dims) => {
+  const { half } = model(dims)
+  return [-1, 1].flatMap(x => [-1, 1].flatMap(y => [-1, 1].map(z => mul([x, y, z], half))))
+}
 
 // The 12 edges of a box from `lo` to `hi`. An edge is visible if it borders a side of the box
-// that lies on the outside of the cube and faces the camera.
-function boxEdges(lo, hi, view) {
-  const onSurface = (normal) => normal.some((v, k) => (v > 0 && hi[k] >= 1 - 1e-9) || (v < 0 && lo[k] <= -1 + 1e-9))
+// that lies on the outside of the puzzle and faces the camera.
+function boxEdges(dims, lo, hi, view) {
+  const { half } = model(dims)
+  const onSurface = (normal) => normal.some((v, k) => (v > 0 && hi[k] >= half[k] - 1e-9) || (v < 0 && lo[k] <= -half[k] + 1e-9))
   const faceSeen = (normal) => onSurface(normal) && toView(normal, view)[2] > 1e-9
   const edges = []
   for (let k = 0; k < 3; k++) {
@@ -201,40 +240,41 @@ function boxEdges(lo, hi, view) {
   return edges
 }
 
-// Box edges of the layer a move turns (the whole cube for x / y / z).
-export function getMoveOutlineEdges(n, move, view = DEFAULT_CUBE_VIEW) {
-  const { axis, whole, cutAt } = layerOf(n, move)
-  const lo = [-1, -1, -1], hi = [1, 1, 1]
+// Box edges of the layer a move turns (the whole puzzle for x / y / z).
+export function getMoveOutlineEdges(dims, move, view = DEFAULT_CUBE_VIEW) {
+  const { half } = model(dims)
+  const { axis, whole, cutAt } = layerOf(dims, move)
+  const lo = scale(half, -1), hi = [...half]
   if (!whole) {
-    const i = axis.findIndex(v => v !== 0)
+    const i = axisIndex(axis)
     if (axis[i] > 0) lo[i] = cutAt
     else hi[i] = -cutAt
   }
-  return boxEdges(lo, hi, view)
+  return boxEdges(dims, lo, hi, view)
 }
 
-// Box edges of one piece. `at` is [column from left, row from bottom, depth from back], 0 to n-1.
-export function getPieceEdges(n, at, view = DEFAULT_CUBE_VIEW) {
-  const step = 2 / n
-  const lo = at.map(i => -1 + i * step)
-  return boxEdges(lo, lo.map(v => v + step), view)
+// Box edges of one piece. `at` is [column from left, row from bottom, depth from back], from 0.
+export function getPieceEdges(dims, at, view = DEFAULT_CUBE_VIEW) {
+  const { step, half } = model(dims)
+  const lo = at.map((i, k) => -half[k] + i * step)
+  return boxEdges(dims, lo, lo.map(v => v + step), view)
 }
 
 // Outline around a group of stickers on one face.
-export function getStickerGroupOutline(n, face, indices, view = DEFAULT_CUBE_VIEW) {
-  const pts = model(n).stickers.filter(s => s.face === face && indices.includes(s.index)).flatMap(s => s.pts)
+export function getStickerGroupOutline(dims, face, indices, view = DEFAULT_CUBE_VIEW) {
+  const pts = model(dims).stickers.filter(s => s.face === face && indices.includes(s.index)).flatMap(s => s.pts)
   return hull(pts.map(p => to2d(toView(p, view))))
 }
 
 // A short arrow pointing straight out of a group of stickers, showing which way they face.
-export function getStickerFacingArrow(n, face, indices, view = DEFAULT_CUBE_VIEW) {
-  const group = model(n).stickers.filter(s => s.face === face && indices.includes(s.index))
+export function getStickerFacingArrow(dims, face, indices, view = DEFAULT_CUBE_VIEW) {
+  const group = model(dims).stickers.filter(s => s.face === face && indices.includes(s.index))
   const center = scale(group.map(s => s.centroid).reduce(add), 1 / group.length)
   return { from: to2d(toView(center, view)), to: to2d(toView(add(center, scale(FACES[face].n, 0.75)), view)) }
 }
 
-export function getViewBounds(view = DEFAULT_CUBE_VIEW) {
-  const pts = CUBE_CORNERS.map(p => to2d(toView(p, view)))
+export function getViewBounds(view = DEFAULT_CUBE_VIEW, dims = 2) {
+  const pts = boxCorners(dims).map(p => to2d(toView(p, view)))
   const xs = pts.map(p => p.x), ys = pts.map(p => p.y)
   return { minX: Math.min(...xs), maxX: Math.max(...xs), minY: Math.min(...ys), maxY: Math.max(...ys) }
 }
@@ -242,22 +282,24 @@ export function getViewBounds(view = DEFAULT_CUBE_VIEW) {
 // Whether a face can be seen from this view.
 export const isFaceVisible = (face, view = DEFAULT_CUBE_VIEW) => toView(FACES[face].n, view)[2] > 1e-9
 
+const faceCenter = (dims, face) => mul(FACES[face].n, model(dims).half)
+
 // The center of a face, for a label.
-export function getFaceLabelPoint(face, view = DEFAULT_CUBE_VIEW) {
-  return to2d(toView(FACES[face].n, view))
+export function getFaceLabelPoint(face, view = DEFAULT_CUBE_VIEW, dims = 2) {
+  return to2d(toView(faceCenter(dims, face), view))
 }
 
-// Label for a face hidden from this view: text beside the cube, level with the edge nearest that
+// Label for a face hidden from this view: text beside the puzzle, level with the edge nearest that
 // face, and an arrow from the text to that edge. `side` ('left' / 'right') overrides which side.
-export function getHiddenFaceLabel(face, view = DEFAULT_CUBE_VIEW, side) {
-  const c = to2d(toView(FACES[face].n, view))
+export function getHiddenFaceLabel(face, view = DEFAULT_CUBE_VIEW, side, dims = 2) {
+  const c = to2d(toView(faceCenter(dims, face), view))
   const len = Math.hypot(c.x, c.y) || 1
   const out = { x: c.x / len, y: c.y / len }
-  const corners = CUBE_CORNERS.map(p => to2d(toView(p, view)))
+  const corners = boxCorners(dims).map(p => to2d(toView(p, view)))
   // the two outline corners furthest toward the hidden face; aim at the middle of the edge between them
   const [a, b] = [...corners].sort((p, q) => (q.x * out.x + q.y * out.y) - (p.x * out.x + p.y * out.y))
   const target = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 }
-  // put the text beside the cube, level with that edge, so it stays clear of a turn arrow
+  // put the text beside the puzzle, below that edge, so it stays clear of a turn arrow
   // drawn straight out from the face
   const xs = corners.map(p => p.x)
   const left = side ? side === 'left' : target.x <= 0
@@ -269,10 +311,9 @@ export function getHiddenFaceLabel(face, view = DEFAULT_CUBE_VIEW, side) {
 }
 
 // Arrow along the front of a ring just outside the turning face, pointing the way it turns.
-export function getMoveArrow(move, view = DEFAULT_CUBE_VIEW) {
-  const faceKey = ROTATION_AXIS[move.face] ?? move.face
-  const axis = FACES[faceKey].n
-  const center = scale(axis, 1.5)
+export function getMoveArrow(move, view = DEFAULT_CUBE_VIEW, dims = 2) {
+  const axis = faceAxis(move.face)
+  const center = scale(axis, model(dims).half[axisIndex(axis)] + 0.5)
   const helper = Math.abs(axis[1]) < 0.9 ? [0, 1, 0] : [1, 0, 0]
   const e1 = unit(cross(helper, axis))
   const e2 = cross(axis, e1)
