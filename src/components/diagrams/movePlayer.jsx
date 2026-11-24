@@ -84,7 +84,7 @@ export function useMovePlayer(animation, angles) {
   const loop = !!animation?.loop
   const phases = useMemo(
     // hold longer on the starting position when it is highlighted
-    () => angles && buildTimeline(angles.length, !!animation.outlineMoves, withHighlight, animation.highlightBefore ? 2000 : undefined, animation.pause?.after),
+    () => angles && buildTimeline(angles.length, !!animation.outlineMoves, withHighlight, animation.firstRest ?? (animation.highlightBefore ? 2000 : undefined), animation.pause?.after),
     [angles, animation, withHighlight],
   )
   const [frame, setFrame] = useState(START_FRAME)

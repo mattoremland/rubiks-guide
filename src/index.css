@@ -45,3 +45,12 @@
   stroke: rgba(255, 255, 255, 0.9);
   stroke-width: 2;
 }
+/* a highlight that flashes, to point at pieces about to move */
+@keyframes highlight-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.2; }
+}
+
+.highlight-pulse {
+  animation: highlight-pulse 0.9s ease-in-out infinite;
+}

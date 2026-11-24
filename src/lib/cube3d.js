@@ -33,11 +33,13 @@ function rotateAbout(p, axis, angle) {
   return add(add(scale(p, c), scale(cross(axis, p), s)), scale(axis, dot(axis, p) * (1 - c)))
 }
 
-// view.x tilts the top toward the camera; view.y turns the right face toward the camera (degrees).
+// view.x tilts the top toward the camera; view.y turns the right face toward the camera; view.z
+// (optional) rolls the picture counterclockwise on screen (degrees).
 function toView(p, view) {
-  const b = -view.y * Math.PI / 180, a = view.x * Math.PI / 180
+  const b = -view.y * Math.PI / 180, a = view.x * Math.PI / 180, c = (view.z ?? 0) * Math.PI / 180
   const q = [p[0] * Math.cos(b) + p[2] * Math.sin(b), p[1], -p[0] * Math.sin(b) + p[2] * Math.cos(b)]
-  return [q[0], q[1] * Math.cos(a) - q[2] * Math.sin(a), q[1] * Math.sin(a) + q[2] * Math.cos(a)]
+  const r = [q[0], q[1] * Math.cos(a) - q[2] * Math.sin(a), q[1] * Math.sin(a) + q[2] * Math.cos(a)]
+  return [r[0] * Math.cos(c) - r[1] * Math.sin(c), r[0] * Math.sin(c) + r[1] * Math.cos(c), r[2]]
 }
 
 function shadeFor(viewNormal) {
@@ -271,11 +273,12 @@ export function getMoveOutlineEdges(dims, move, view = DEFAULT_CUBE_VIEW) {
   return boxEdges(dims, lo, hi, view)
 }
 
-// Box edges of one piece. `at` is [column from left, row from bottom, depth from back], from 0.
-export function getPieceEdges(dims, at, view = DEFAULT_CUBE_VIEW) {
+// Box edges of one piece, or of a block of pieces `size` [columns, rows, depth] across.
+// `at` is [column from left, row from bottom, depth from back], from 0.
+export function getPieceEdges(dims, at, view = DEFAULT_CUBE_VIEW, size = [1, 1, 1]) {
   const { step, half } = model(dims)
   const lo = at.map((i, k) => -half[k] + i * step)
-  return boxEdges(dims, lo, lo.map(v => v + step), view)
+  return boxEdges(dims, lo, lo.map((v, k) => v + size[k] * step), view)
 }
 
 // Outline around a group of stickers on one face.

@@ -10,6 +10,7 @@ import AlgorithmCard from '../components/content/AlgorithmCard'
 import PuzzleNotation from '../components/content/PuzzleNotation'
 import { withEmphasis } from '../lib/emphasis'
 import SubStepLabel from '../components/content/SubStepLabel'
+import TopPattern from '../components/diagrams/TopPattern'
 
 // Hands out sub-step labels (3a, 3b, ...) in the order items appear within a step.
 function labeler(stepNumber) {
@@ -111,17 +112,26 @@ export default function PuzzlePage() {
                   <div className="flex flex-wrap justify-center gap-8 mb-6">
                     {stage.figures.map((fig, i) => (
                       <figure key={i} className="flex flex-col items-center gap-2">
-                        <CubeDiagram
-                          puzzleType={puzzle.type}
-                          dimensions={puzzle.dimensions}
-                          state={fig.state}
-                          outline={fig.outline}
-                          view={fig.view}
-                          groups={fig.groups}
-                          pieces={fig.pieces}
-                          highlightColor={fig.highlightColor}
-                          size={160}
-                        />
+                        {fig.patterns ? (
+                          // a row of top-face patterns, one sub-step
+                          <div className="flex flex-wrap justify-center gap-3">
+                            {fig.patterns.map((p, k) => (
+                              <TopPattern key={k} pattern={p} color={fig.patternColor} circled={k === fig.circled} />
+                            ))}
+                          </div>
+                        ) : (
+                          <CubeDiagram
+                            puzzleType={puzzle.type}
+                            dimensions={puzzle.dimensions}
+                            state={fig.state}
+                            outline={fig.outline}
+                            view={fig.view}
+                            groups={fig.groups}
+                            pieces={fig.pieces}
+                            highlightColor={fig.highlightColor}
+                            size={160}
+                          />
+                        )}
                         <Caption label={nextLabel()}>{withEmphasis(fig.caption)}</Caption>
                       </figure>
                     ))}
@@ -187,6 +197,8 @@ export default function PuzzlePage() {
                           animation={fig.animation}
                           view={fig.view}
                           groups={fig.groups}
+                          pieces={fig.pieces}
+                          highlightColor={fig.highlightColor}
                           size={fig.animation ? 180 : 160}
                         />
                         <Caption label={nextLabel()}>{withEmphasis(fig.caption)}</Caption>

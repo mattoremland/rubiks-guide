@@ -10,6 +10,8 @@ import {
 import { getStickerColor } from '../../data/colors'
 
 const PAD = 14
+// cycle arrows are dark with a light glow, so they stand apart from white outlines
+const ARROW_DARK = '#0f172a'
 const ARROW_PAD = 8
 
 // Box outline: edges you can see solid, hidden edges faint (or left out with `hidden={false}`).
@@ -61,9 +63,11 @@ function Ghost({ dims, group, view, state, color, opacity = 1 }) {
 // `animation`: { alg: "R U R' U'", outlineMoves?, loop?, highlightBefore?, highlightAfter?: [{ face, indices }] } plays the
 // moves from `state` (once when first scrolled into view, then on Replay, or looping with `loop`).
 // `view`: { x, y } camera angles in degrees. `groups`: [{ face, indices }] outlines stickers;
-// `labels`: { face: text } names the faces; `pieces`: [[column, row, depth], ...] outlines whole pieces.
+// `labels`: { face: text } names the faces; `pieces`: [[column, row, depth], ...] outlines whole pieces
+// (or { at: [column, row, depth], size: [columns, rows, depth] } outlines a block of pieces).
 // `highlightColor` (or `animation.highlightColor`) colors the outlines, e.g. to stand out on white stickers.
-export default function IsoCube3D({ state, size = 200, animation, view, groups, labels, pieces, highlightColor }) {
+// `frameBox` fixes the drawing area (used while the camera moves, so the picture doesn't jump).
+export default function IsoCube3D({ state, size = 200, animation, view, groups, labels, pieces, highlightColor, frameBox }) {
   const v = view ?? DEFAULT_CUBE_VIEW
   const hl = highlightColor ?? animation?.highlightColor ?? '#FFFFFF'
   // piece counts { x, y, z }; kept stable between redraws so animations don't restart
@@ -87,7 +91,7 @@ export default function IsoCube3D({ state, size = 200, animation, view, groups, 
   const arrows = useMemo(() => moves?.map(m => getMoveArrow(m, v, dims)) ?? [], [moves, v, dims])
 
   const b = getViewBounds(v, dims)
-  const box = { minX: b.minX - PAD, minY: b.minY - PAD, maxX: b.maxX + PAD, maxY: b.maxY + PAD }
+  const box = frameBox ? { ...frameBox } : { minX: b.minX - PAD, minY: b.minY - PAD, maxX: b.maxX + PAD, maxY: b.maxY + PAD }
   for (const a of arrows) growBox(box, a.bounds, ARROW_PAD)
   // visible faces are labeled in place; hidden ones get a label outside the cube with a pointer
   const labelPoints = labels
@@ -130,6 +134,7 @@ export default function IsoCube3D({ state, size = 200, animation, view, groups, 
         {animation?.highlightBefore && frame.before > 0 && animation.highlightBefore.filter(g => isFaceVisible(g.face, v)).map((g, i) => (
           <polygon
             key={`before-${i}`}
+            className={animation.flash ? 'highlight-pulse' : undefined}
             points={ptsStr(getStickerGroupOutline(dims, g.face, g.indices, v))}
             fill={hl}
             fillOpacity={0.15}
@@ -139,6 +144,26 @@ export default function IsoCube3D({ state, size = 200, animation, view, groups, 
             style={glow}
           />
         ))}
+        {/* arrows from sticker to sticker, before the first move: where each piece is about to go */}
+        {animation?.arrows && frame.before > 0 && animation.arrows.map((ar, i) => {
+          const center = (g) => {
+            const pts = getStickerGroupOutline(dims, g.face, g.indices, v)
+            return { x: pts.reduce((a, p) => a + p.x, 0) / pts.length, y: pts.reduce((a, p) => a + p.y, 0) / pts.length }
+          }
+          const a = center(ar.from), b = center(ar.to)
+          const trim = (t) => ({ x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t })
+          const p = trim(0.15), q = trim(0.8)
+          return (
+            <line key={`cycle-${i}`} x1={p.x} y1={p.y} x2={q.x} y2={q.y} stroke={ARROW_DARK} strokeWidth={2} strokeLinecap="round" markerEnd="url(#cycle-arrowhead)" style={glow} />
+          )
+        })}
+        {animation?.arrows && (
+          <defs>
+            <marker id="cycle-arrowhead" markerWidth="5" markerHeight="5" refX="2" refY="2.5" orient="auto">
+              <polygon points="0,0 5,2.5 0,5" fill={ARROW_DARK} />
+            </marker>
+          </defs>
+        )}
         {/* the highlight shown while the animation stops part-way through */}
         {animation?.pause && frame.pause > 0 && animation.pause.highlight.map((g, i) => (isFaceVisible(g.face, v)
           ? (
@@ -174,7 +199,9 @@ export default function IsoCube3D({ state, size = 200, animation, view, groups, 
           />
         ))}
       </g>
-      {pieces?.map((at, i) => <BoxEdges key={`piece-${i}`} edges={getPieceEdges(dims, at, v)} color={hl} hidden={false} />)}
+      {pieces?.map((p, i) => (
+        <BoxEdges key={`piece-${i}`} edges={Array.isArray(p) ? getPieceEdges(dims, p, v) : getPieceEdges(dims, p.at, v, p.size)} color={hl} hidden={false} />
+      ))}
       {/* stickers on hidden faces show faintly through the cube, with an arrow for the way they face */}
       {groups?.filter(g => !isFaceVisible(g.face, v)).map((g, i) => (
         <Ghost key={`ghost-${i}`} dims={dims} group={g} view={v} state={state} color={hl} />
