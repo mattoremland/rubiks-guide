@@ -118,6 +118,8 @@ export default function PuzzlePage() {
                           outline={fig.outline}
                           view={fig.view}
                           groups={fig.groups}
+                          pieces={fig.pieces}
+                          highlightColor={fig.highlightColor}
                           size={160}
                         />
                         <Caption label={nextLabel()}>{withEmphasis(fig.caption)}</Caption>
@@ -145,6 +147,7 @@ export default function PuzzlePage() {
                       state={stage.animation.state}
                       animation={stage.animation}
                       view={stage.animation.view}
+                      pieces={stage.animation.pieces}
                       size={180}
                     />
                     <Caption label={nextLabel()}>{stage.animation.caption}</Caption>
@@ -171,7 +174,9 @@ export default function PuzzlePage() {
                 )}
                 {stage.closing && (
                   <div className="mt-6">
-                    <p className="text-text-secondary text-sm mb-4">{withEmphasis(stage.closing.text)}</p>
+                    {stage.closing.text && (
+                      <p className="text-text-secondary text-sm mb-4">{withEmphasis(stage.closing.text)}</p>
+                    )}
                     {stage.closing.figure && (
                       <figure className="flex flex-col items-center gap-2">
                         <CubeDiagram

@@ -65,15 +65,14 @@ export function solvedState(n) {
   return Object.fromEntries(Object.entries(SOLVED_COLORS).map(([f, c]) => [f, Array(n * n).fill(c)]))
 }
 
-// "R U R' U2 x" -> [{ face: 'R', turns: 1 }, ...]; turns: 1 clockwise, -1 counterclockwise, 2 half turn.
+// "R U R' U2 x2'" -> [{ face: 'R', turns: 1 }, ...]; turns: 1 clockwise, -1 counterclockwise,
+// 2 half turn clockwise, -2 half turn counterclockwise (same result, opposite direction on screen).
 export function parseAlg(alg) {
-  return [...alg.matchAll(/([RLUDFBxyz])(2'|2|')?/g)].map(([, face, mod]) => ({
-    face,
-    turns: mod === "'" ? -1 : mod?.startsWith('2') ? 2 : 1,
-  }))
+  const TURNS = { '': 1, "'": -1, 2: 2, "2'": -2 }
+  return [...alg.matchAll(/([RLUDFBxyz])(2'|2|')?/g)].map(([, face, mod]) => ({ face, turns: TURNS[mod ?? ''] }))
 }
 
-export const moveName = (m) => m.face + (m.turns === -1 ? "'" : m.turns === 2 ? '2' : '')
+export const moveName = (m) => m.face + ({ 1: '', [-1]: "'", 2: '2', [-2]: "2'" })[m.turns]
 
 // Clockwise, seen from outside the face, is a negative rotation about its outward normal.
 export const moveAngle = (m) => -m.turns * Math.PI / 2
@@ -175,19 +174,11 @@ function hull(points) {
 
 const CUBE_CORNERS = [-1, 1].flatMap(x => [-1, 1].flatMap(y => [-1, 1].map(z => [x, y, z])))
 
-// The 12 edges of the box a move turns, each marked visible if it borders a face of the cube
-// that faces the camera. (The layer's inner face is inside the cube, so it never counts.)
-export function getMoveOutlineEdges(n, move, view = DEFAULT_CUBE_VIEW) {
-  const { axis, whole, cutAt } = layerOf(n, move)
-  const lo = [-1, -1, -1], hi = [1, 1, 1]
-  const inner = []
-  if (!whole) {
-    const i = axis.findIndex(v => v !== 0)
-    if (axis[i] > 0) lo[i] = cutAt
-    else hi[i] = -cutAt
-    inner.push(axis.map(v => -v).join())
-  }
-  const faceSeen = (normal) => !inner.includes(normal.join()) && toView(normal, view)[2] > 1e-9
+// The 12 edges of a box from `lo` to `hi`. An edge is visible if it borders a side of the box
+// that lies on the outside of the cube and faces the camera.
+function boxEdges(lo, hi, view) {
+  const onSurface = (normal) => normal.some((v, k) => (v > 0 && hi[k] >= 1 - 1e-9) || (v < 0 && lo[k] <= -1 + 1e-9))
+  const faceSeen = (normal) => onSurface(normal) && toView(normal, view)[2] > 1e-9
   const edges = []
   for (let k = 0; k < 3; k++) {
     const [a, b] = [0, 1, 2].filter(j => j !== k)
@@ -210,10 +201,36 @@ export function getMoveOutlineEdges(n, move, view = DEFAULT_CUBE_VIEW) {
   return edges
 }
 
+// Box edges of the layer a move turns (the whole cube for x / y / z).
+export function getMoveOutlineEdges(n, move, view = DEFAULT_CUBE_VIEW) {
+  const { axis, whole, cutAt } = layerOf(n, move)
+  const lo = [-1, -1, -1], hi = [1, 1, 1]
+  if (!whole) {
+    const i = axis.findIndex(v => v !== 0)
+    if (axis[i] > 0) lo[i] = cutAt
+    else hi[i] = -cutAt
+  }
+  return boxEdges(lo, hi, view)
+}
+
+// Box edges of one piece. `at` is [column from left, row from bottom, depth from back], 0 to n-1.
+export function getPieceEdges(n, at, view = DEFAULT_CUBE_VIEW) {
+  const step = 2 / n
+  const lo = at.map(i => -1 + i * step)
+  return boxEdges(lo, lo.map(v => v + step), view)
+}
+
 // Outline around a group of stickers on one face.
 export function getStickerGroupOutline(n, face, indices, view = DEFAULT_CUBE_VIEW) {
   const pts = model(n).stickers.filter(s => s.face === face && indices.includes(s.index)).flatMap(s => s.pts)
   return hull(pts.map(p => to2d(toView(p, view))))
+}
+
+// A short arrow pointing straight out of a group of stickers, showing which way they face.
+export function getStickerFacingArrow(n, face, indices, view = DEFAULT_CUBE_VIEW) {
+  const group = model(n).stickers.filter(s => s.face === face && indices.includes(s.index))
+  const center = scale(group.map(s => s.centroid).reduce(add), 1 / group.length)
+  return { from: to2d(toView(center, view)), to: to2d(toView(add(center, scale(FACES[face].n, 0.75)), view)) }
 }
 
 export function getViewBounds(view = DEFAULT_CUBE_VIEW) {
@@ -267,7 +284,7 @@ export function getMoveArrow(move, view = DEFAULT_CUBE_VIEW) {
     if (z > maxZ) { maxZ = z; front = deg }
   }
   const dir = Math.sign(moveAngle(move))
-  const sweep = move.turns === 2 ? 150 : 115
+  const sweep = Math.abs(move.turns) === 2 ? 150 : 115
   const pts = []
   for (let k = -sweep; k <= sweep; k += 5) pts.push(to2d(at((front + dir * k) * Math.PI / 180)))
   const xs = pts.map(p => p.x), ys = pts.map(p => p.y)

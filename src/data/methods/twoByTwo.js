@@ -21,17 +21,20 @@ const STEP2 = 'U'
 const STEP3 = `${INSERT} ${INSERT} ${INSERT}`
 const STEP4 = 'y U'
 const STEP5 = INSERT
-const STEP7 = "U'"
-const FINISH = "x' U"
+// turn the bottom so the whole right side matches the headlights, then U'
+const STEP7 = "D U'"
 
 const S1 = applyAlg(SCRAMBLE, STEP1)
+// Step 1's goal: the two white-blue corners on the top left, white as a bar on top, blue facing left.
+// Turning the whole cube upside down (x2) gives the Step 2 hold: white down, blue on the left.
+const FLIP = "x2'"
+const PAIRED = applyAlg(S1, FLIP)
 const S2 = applyAlg(S1, STEP2)
 const S3 = applyAlg(S2, STEP3)
 const S4 = applyAlg(S3, STEP4)
 const S5 = applyAlg(S4, STEP5)
 const S6 = applyAlg(S5, ORIENT)
 const S7 = applyAlg(S6, STEP7)
-const S8 = applyAlg(S7, SWAP)
 
 // Bottom solved with two yellow corners on top, turned so a yellow sticker faces left on the
 // back-left corner (the 6b set-up).
@@ -41,9 +44,12 @@ const TWO_YELLOW = applyAlg(solvedState(2), "z2 y' F R U R' U' F' U2")
 // (D: 0 front-left 1 front-right 2 back-left 3 back-right as seen from below); side faces
 // 0 top-left 1 top-right 2 bottom-left 3 bottom-right as you look at that face.
 const TOP_FRONT_RIGHT = [{ face: 'U', indices: [3] }, { face: 'F', indices: [1] }, { face: 'R', indices: [0] }]
+// Pieces as [column from left, row from bottom, depth from back]
+const TOP_LEFT_PAIR = [[0, 1, 1], [0, 1, 0]]
+const WHITE_BAR = [{ face: 'U', indices: [0, 2] }]
+// pale blue, so outlines stand out against white stickers
+const ON_WHITE = '#7DD3FC'
 
-const FROM_BELOW_LEFT = { x: -25, y: -35 }
-const FROM_LEFT = { x: 25, y: -35 }
 // Notation demos for the left and bottom faces
 const LEFT_DEMO = { x: 25, y: -20 }
 
@@ -82,16 +88,15 @@ export const twoByTwoMethod = {
     {
       slug: 'white-blue',
       name: 'Step 1: Match White and Blue',
-      description: 'Match white and blue sides.',
-      animation: {
-        state: SCRAMBLE,
-        view: FROM_BELOW_LEFT,
-        alg: STEP1,
-        outlineMoves: true,
-        // the two white-blue corners, now side by side on the bottom left
-        highlightAfter: [{ face: 'D', indices: [0, 2] }, { face: 'L', indices: [2, 3] }],
-        caption: 'In this example, R U F brings the two white-blue corners together, with white on the bottom and blue on the left.',
-      },
+      description: 'Arrange these pieces next to each other.',
+      figures: [
+        {
+          state: PAIRED,
+          pieces: TOP_LEFT_PAIR,
+          highlightColor: ON_WHITE,
+          caption: 'The two white corners that share blue, side by side, with white as a bar on the upper face.',
+        },
+      ],
       algorithms: [],
     },
     {
@@ -99,12 +104,27 @@ export const twoByTwoMethod = {
       name: 'Step 2: Position the White-Red Corner',
       description:
         'Keeping white on bottom left, move the corner with white and red faces to the bottom right corner of the top half.',
+      // the whole cube turns upside down (no face turn), taking the white bar to the bottom left
       animation: {
-        state: S1,
-        alg: STEP2,
-        outlineMoves: true,
-        highlightAfter: TOP_FRONT_RIGHT,
-        caption: 'Here a single U brings the white-red corner to the top front-right.',
+        state: PAIRED,
+        alg: FLIP,
+        highlightBefore: WHITE_BAR,
+        highlightColor: ON_WHITE,
+        caption: 'Turn the whole cube upside down, so the white bar from step 1 ends up on the bottom left with white facing down.',
+      },
+      closing: {
+        figure: {
+          state: S1,
+          animation: {
+            alg: STEP2,
+            outlineMoves: true,
+            // red on the front of the white bar, then red on the corner that will drop in beside it
+            highlightBefore: [{ face: 'F', indices: [2] }],
+            highlightAfter: [{ face: 'F', indices: [2] }, { face: 'R', indices: [0] }],
+          },
+          caption:
+            'Note the red sticker facing you on the white bar below: the corner that drops in next to it must also have red. Of the two white corners left, only one has any red on it, so there is only one choice. Then, in this example, a single U brings the white-red corner to the top front-right, directly above the location it needs to go.',
+        },
       },
       algorithms: [],
     },
@@ -117,7 +137,8 @@ export const twoByTwoMethod = {
         state: S2,
         alg: STEP3,
         outlineMoves: true,
-        highlightAfter: [{ face: 'F', indices: [3] }, { face: 'R', indices: [2] }],
+        // the inserted corner, with its red now beside the red of the white bar
+        highlightAfter: [{ face: 'F', indices: [2, 3] }, { face: 'R', indices: [2] }],
         caption: "This corner needs R U R' U' three times.",
       },
       algorithms: [],
@@ -126,7 +147,7 @@ export const twoByTwoMethod = {
       slug: 'last-white',
       name: 'Step 4: Position the Last White Corner',
       description:
-        'Turn the whole cube (y) so the empty white slot is at the front right, then rotate the top face so the remaining white corner is in the bottom right of the top face.',
+        'Turn the whole cube (y) so the empty white slot is at the front right. Then rotate the top face so the remaining white corner is directly above the location it needs to go, as in step 2b.',
       animation: {
         state: S3,
         alg: STEP4,
@@ -144,7 +165,7 @@ export const twoByTwoMethod = {
         alg: STEP5,
         outlineMoves: true,
         highlightAfter: [{ face: 'F', indices: [2, 3] }, { face: 'R', indices: [2, 3] }],
-        caption: 'The white layer is now solved, and the bottom row of every side matches.',
+        caption: 'The bottom half of the cube is now completely solved, with white on the bottom.',
       },
       algorithms: [],
     },
@@ -161,7 +182,6 @@ export const twoByTwoMethod = {
         },
         {
           state: TWO_YELLOW,
-          view: FROM_LEFT,
           groups: [{ face: 'L', indices: [0] }],
           caption:
             'If there are no yellow corners or two yellow corners on top, turn the top so a yellow sticker faces left on the back-left corner, then execute the algorithm.',
@@ -185,32 +205,28 @@ export const twoByTwoMethod = {
           state: S6,
           groups: [{ face: 'R', indices: [0, 1] }],
           caption:
-            "In most cases, you will have a side that is actually paired up correctly. If so, move this to the right face with yellow on top. Then do U'.",
+            "In most cases, you will have a side that is actually paired up correctly. If so, move this to the right face with yellow on top, and rotate the bottom of the cube until the entire right side (green in this example) is solved. Then do U'.",
         },
       ],
       animation: {
         state: S6,
         alg: STEP7,
         outlineMoves: true,
+        caption: "Here the pair is already on the right, so D lines up the green bottom under it, then U'.",
       },
       algorithms: [],
     },
     {
       slug: 'swap',
       name: 'Step 8: Finish',
-      description: `Repeat ${SWAP} until solved or you are in case 7a.`,
+      description: `Do ${SWAP}.`,
       animation: {
         state: S7,
         alg: SWAP,
         outlineMoves: true,
       },
       closing: {
-        text: 'The cube ends with white facing you. Turn it so white is back on the bottom, then turn the top face to finish.',
-        figure: {
-          state: S8,
-          animation: { alg: FINISH, outlineMoves: true },
-          caption: "Here that is x' (turning the whole cube) and then U.",
-        },
+        text: 'The cube ends with white facing you. Turn it so white is back on the bottom. The cube is now either solved, or you will have to repeat steps 7 and 8 one more time.',
       },
       algorithms: [],
     },
