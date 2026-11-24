@@ -92,14 +92,18 @@ function quarterTurns(dims, axis) {
   return dims[a] === dims[b]
 }
 
-const faceAxis = (face) => FACES[ROTATION_AXIS[face] ?? face].n
+// Middle-layer moves turn the same way as the face named here. M is the middle horizontal layer
+// (on a 2x2x3 tower), turning like D: counterclockwise as seen from above.
+const SLICES = { M: 'D' }
+
+const faceAxis = (face) => FACES[ROTATION_AXIS[face] ?? SLICES[face] ?? face].n
 
 // "R U R' U2 x2'" -> [{ face: 'R', turns: 1 }, ...]; turns: 1 clockwise, -1 counterclockwise,
 // 2 half turn clockwise, -2 half turn counterclockwise (same result, opposite direction on screen).
 // With `dims`, a face that can only make half turns (like R on a 3x3x2) turns 180° for R and R'.
 export function parseAlg(alg, dims) {
   const TURNS = { '': 1, "'": -1, 2: 2, "2'": -2 }
-  return [...alg.matchAll(/([RLUDFBxyz])(2'|2|')?/g)].map(([, face, mod]) => {
+  return [...alg.matchAll(/([RLUDFBMxyz])(2'|2|')?/g)].map(([, face, mod]) => {
     let turns = TURNS[mod ?? '']
     if (dims && Math.abs(turns) === 1 && !quarterTurns(toDims(dims), faceAxis(face))) turns *= 2
     return { face, turns }
@@ -111,13 +115,17 @@ export const moveName = (m) => m.face + ({ 1: '', [-1]: "'", 2: '2', [-2]: "2'" 
 // Clockwise, seen from outside the face, is a negative rotation about its outward normal.
 export const moveAngle = (m) => -m.turns * Math.PI / 2
 
+// The turning layer: the stickers whose distance along `axis` is between `lo` and `hi`
+// (the whole puzzle for x / y / z; the middle layer, of a puzzle 3 pieces tall, for slice moves).
 function layerOf(dims, move) {
   const { step, half } = model(dims)
   const axis = faceAxis(move.face)
   const whole = move.face in ROTATION_AXIS
   const extent = half[axisIndex(axis)]
-  const cutAt = extent - step
-  return { axis, whole, extent, cutAt, inLayer: (s) => whole || dot(s.centroid, axis) > cutAt + 1e-9 }
+  const [lo, hi] = move.face in SLICES ? [-step / 2, step / 2] : [extent - step, extent]
+  // stickers on the turning face itself sit exactly at `hi`, so that end is inclusive
+  const inLayer = (s) => whole || (dot(s.centroid, axis) > lo + 1e-9 && dot(s.centroid, axis) < hi + 1e-9)
+  return { axis, whole, extent, lo, hi, inLayer }
 }
 
 export function applyMove(state, move) {
@@ -172,22 +180,32 @@ function visiblePolys(polys, view) {
 export function getTurnPolygons(state, move, angle, view = DEFAULT_CUBE_VIEW) {
   const dims = dimsOf(state)
   const { stickers } = model(dims)
-  const { axis, whole, cutAt, inLayer } = move ? layerOf(dims, move) : { whole: true, inLayer: () => true }
-  const body = []
+  const { axis, whole, extent, lo, hi, inLayer } = move ? layerOf(dims, move) : { whole: true, inLayer: () => true }
+  // the puzzle splits into the part below the layer (along `axis`), the layer, and the part above
+  const below = []
   const layer = []
+  const above = []
+  const turned = (pts) => pts.map(p => rotateAbout(p, axis, angle))
   if (move && !whole) {
-    body.push({ pts: cutRect(dims, axis, cutAt), normal: axis, color: null })
-    layer.push({ pts: cutRect(dims, axis, cutAt).map(p => rotateAbout(p, axis, angle)), normal: scale(axis, -1), color: null })
+    if (lo > -extent + 1e-9) {
+      below.push({ pts: cutRect(dims, axis, lo), normal: axis, color: null })
+      layer.push({ pts: turned(cutRect(dims, axis, lo)), normal: rotateAbout(scale(axis, -1), axis, angle), color: null })
+    }
+    if (hi < extent - 1e-9) {
+      above.push({ pts: cutRect(dims, axis, hi), normal: scale(axis, -1), color: null })
+      layer.push({ pts: turned(cutRect(dims, axis, hi)), normal: axis, color: null })
+    }
   }
   for (const s of stickers) {
     const base = { face: s.face, index: s.index, color: state[s.face][s.index] }
     const fn = FACES[s.face].n
-    if (move && inLayer(s)) layer.push({ ...base, pts: s.pts.map(p => rotateAbout(p, axis, angle)), normal: rotateAbout(fn, axis, angle) })
-    else body.push({ ...base, pts: s.pts, normal: fn })
+    if (move && inLayer(s)) layer.push({ ...base, pts: turned(s.pts), normal: rotateAbout(fn, axis, angle) })
+    else if (!move || whole || dot(s.centroid, axis) < lo) below.push({ ...base, pts: s.pts, normal: fn })
+    else above.push({ ...base, pts: s.pts, normal: fn })
   }
-  const layerInFront = !move || whole || toView(axis, view)[2] > 0
-  const [first, second] = layerInFront ? [body, layer] : [layer, body]
-  return [...visiblePolys(first, view), ...visiblePolys(second, view)]
+  // back to front: the part furthest from the camera along the turning axis first
+  const order = !move || whole || toView(axis, view)[2] > 0 ? [below, layer, above] : [above, layer, below]
+  return order.flatMap(part => visiblePolys(part, view))
 }
 
 export const getCubePolygons = (state, view = DEFAULT_CUBE_VIEW) => getTurnPolygons(state, null, 0, view)
@@ -243,12 +261,12 @@ function boxEdges(dims, lo, hi, view) {
 // Box edges of the layer a move turns (the whole puzzle for x / y / z).
 export function getMoveOutlineEdges(dims, move, view = DEFAULT_CUBE_VIEW) {
   const { half } = model(dims)
-  const { axis, whole, cutAt } = layerOf(dims, move)
+  const layer = layerOf(dims, move)
   const lo = scale(half, -1), hi = [...half]
-  if (!whole) {
-    const i = axisIndex(axis)
-    if (axis[i] > 0) lo[i] = cutAt
-    else hi[i] = -cutAt
+  if (!layer.whole) {
+    const i = axisIndex(layer.axis)
+    const s = layer.axis[i]
+    ;[lo[i], hi[i]] = s > 0 ? [layer.lo, layer.hi] : [-layer.hi, -layer.lo]
   }
   return boxEdges(dims, lo, hi, view)
 }
@@ -313,11 +331,14 @@ export function getHiddenFaceLabel(face, view = DEFAULT_CUBE_VIEW, side, dims = 
 // Arrow along the front of a ring just outside the turning face, pointing the way it turns.
 export function getMoveArrow(move, view = DEFAULT_CUBE_VIEW, dims = 2) {
   const axis = faceAxis(move.face)
-  const center = scale(axis, model(dims).half[axisIndex(axis)] + 0.5)
+  const { half } = model(dims)
+  const slice = move.face in SLICES
+  // face moves: a ring just outside the face; middle layers: a ring around the middle of the puzzle
+  const center = slice ? [0, 0, 0] : scale(axis, half[axisIndex(axis)] + 0.5)
   const helper = Math.abs(axis[1]) < 0.9 ? [0, 1, 0] : [1, 0, 0]
   const e1 = unit(cross(helper, axis))
   const e2 = cross(axis, e1)
-  const rho = 0.75
+  const rho = slice ? Math.hypot(...half.filter((_, k) => k !== axisIndex(axis))) + 0.2 : 0.75
   const at = (t) => toView(add(center, add(scale(e1, rho * Math.cos(t)), scale(e2, rho * Math.sin(t)))), view)
   let front = 0, maxZ = -Infinity
   for (let deg = 0; deg < 360; deg += 2) {

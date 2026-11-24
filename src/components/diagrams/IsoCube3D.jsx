@@ -100,7 +100,7 @@ export default function IsoCube3D({ state, size = 200, animation, view, groups, 
     })
     : []
   for (const p of labelPoints) growBox(box, { minX: p.x, maxX: p.x, minY: p.y, maxY: p.y }, 16)
-  for (const g of [...(groups ?? []), ...(animation?.highlightBefore ?? [])]) {
+  for (const g of [...(groups ?? []), ...(animation?.highlightBefore ?? []), ...(animation?.pause?.highlight ?? [])]) {
     if (isFaceVisible(g.face, v)) continue
     const { to } = getStickerFacingArrow(dims, g.face, g.indices, v)
     growBox(box, { minX: to.x, maxX: to.x, minY: to.y, maxY: to.y }, 10)
@@ -139,6 +139,23 @@ export default function IsoCube3D({ state, size = 200, animation, view, groups, 
             style={glow}
           />
         ))}
+        {/* the highlight shown while the animation stops part-way through */}
+        {animation?.pause && frame.pause > 0 && animation.pause.highlight.map((g, i) => (isFaceVisible(g.face, v)
+          ? (
+            <polygon
+              key={`pause-${i}`}
+              points={ptsStr(getStickerGroupOutline(dims, g.face, g.indices, v))}
+              fill={hl}
+              fillOpacity={0.15}
+              stroke={hl}
+              strokeWidth={2.5}
+              strokeLinejoin="round"
+              opacity={frame.pause}
+              style={glow}
+            />
+          )
+          : <Ghost key={`pause-${i}`} dims={dims} group={g} view={v} state={states[frame.k]} color={hl} opacity={frame.pause} />
+        ))}
         {/* before-highlights on hidden faces flash faintly through the cube, like ghost groups */}
         {animation?.highlightBefore && frame.before > 0 && animation.highlightBefore.filter(g => !isFaceVisible(g.face, v)).map((g, i) => (
           <Ghost key={`before-ghost-${i}`} dims={dims} group={g} view={v} state={state} color={hl} opacity={frame.before} />
@@ -162,7 +179,7 @@ export default function IsoCube3D({ state, size = 200, animation, view, groups, 
       {groups?.filter(g => !isFaceVisible(g.face, v)).map((g, i) => (
         <Ghost key={`ghost-${i}`} dims={dims} group={g} view={v} state={state} color={hl} />
       ))}
-      {[...(groups ?? []), ...(animation?.highlightBefore ?? [])].some(g => !isFaceVisible(g.face, v)) && (
+      {[...(groups ?? []), ...(animation?.highlightBefore ?? []), ...(animation?.pause?.highlight ?? [])].some(g => !isFaceVisible(g.face, v)) && (
         <defs>
           <marker id="facing-arrowhead" markerWidth="7" markerHeight="6" refX="5" refY="3" orient="auto">
             <polygon points="0,0 7,3 0,6" fill={hl} fillOpacity={0.6} />

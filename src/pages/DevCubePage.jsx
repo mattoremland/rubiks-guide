@@ -61,14 +61,14 @@ export default function DevCubePage() {
           <div className="flex items-center gap-2 text-text-secondary">
             Puzzle:
             {/* width x height x depth */}
-            {['2x2x2', '3x2x3', '3x3x3', '4x4x4', '5x5x5'].map(k => (
+            {['2x2x2', '2x3x2', '3x2x3', '3x3x3', '4x4x4', '5x5x5'].map(k => (
               <button
                 key={k}
                 type="button"
                 onClick={() => setShape(k)}
                 className={`px-2 py-1 rounded border border-border ${k === shape ? 'bg-accent text-white' : 'hover:bg-surface-hover'}`}
               >
-                {k === '3x2x3' ? '3x3x2' : k}
+                {{ '3x2x3': '3x3x2', '2x3x2': '2x2x3' }[k] ?? k}
               </button>
             ))}
           </div>

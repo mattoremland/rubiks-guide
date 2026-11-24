@@ -9,9 +9,10 @@ const easeInOut = (t) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) 
 
 // Ordered phases of one play-through. Each has a duration, the move it belongs to
 // (moves.length = finished), and what it animates: 'spin' turns that move, 'outlineIn' /
-// 'outlineOut' fade the outline of the layer about to turn, 'highlightIn' fades in the end
-// highlight, and 'fadeOut' / 'fadeIn' return to the beginning.
-function buildTimeline(moveCount, outlineMoves, withHighlight, firstRest) {
+// 'outlineOut' fade the outline of the layer about to turn, 'pauseIn' / 'pauseHold' / 'pauseOut'
+// stop after one move to point something out, 'highlightIn' fades in the end highlight, and
+// 'fadeOut' / 'fadeIn' return to the beginning.
+function buildTimeline(moveCount, outlineMoves, withHighlight, firstRest, pauseAfter) {
   const single = moveCount === 1
   // long sequences (e.g. a trigger repeated three times) move along faster
   const long = moveCount > 4
@@ -24,6 +25,12 @@ function buildTimeline(moveCount, outlineMoves, withHighlight, firstRest) {
       phases.push({ k, kind: 'outlineOut', ms: long ? 150 : 250 })
     }
     phases.push({ k, kind: 'spin', ms: single ? 1000 : long ? 650 : 900 })
+    if (k === pauseAfter) {
+      phases.push({ k: k + 1, kind: 'rest', ms: 300 })
+      phases.push({ k: k + 1, kind: 'pauseIn', ms: 350 })
+      phases.push({ k: k + 1, kind: 'pauseHold', ms: 1800 })
+      phases.push({ k: k + 1, kind: 'pauseOut', ms: 350 })
+    }
   }
   if (withHighlight) {
     phases.push({ k: moveCount, kind: 'rest', ms: 450 })
@@ -37,8 +44,9 @@ function buildTimeline(moveCount, outlineMoves, withHighlight, firstRest) {
   return phases
 }
 
-// `before` is 1 while the first move has not started yet (for a highlight of the starting position).
-const START_FRAME = { k: 0, angle: 0, outline: 0, highlight: 0, opacity: 1, before: 1 }
+// `before` is 1 while the first move has not started yet (for a highlight of the starting position);
+// `pause` fades the highlight shown while stopped part-way through.
+const START_FRAME = { k: 0, angle: 0, outline: 0, highlight: 0, opacity: 1, before: 1, pause: 0 }
 
 // `angles[k]` is the full turn angle of move k, in radians.
 function frameAt(phases, t, angles) {
@@ -49,11 +57,14 @@ function frameAt(phases, t, angles) {
     if (t < start + p.ms) {
       const u = (t - start) / p.ms
       const before = i < firstSpin || p.kind === 'fadeIn' ? 1 : 0
-      const f = { k: p.k, angle: 0, outline: 0, highlight: 0, opacity: 1, before }
+      const f = { k: p.k, angle: 0, outline: 0, highlight: 0, opacity: 1, before, pause: 0 }
       if (p.kind === 'spin') f.angle = angles[p.k] * easeInOut(u)
       if (p.kind === 'outlineIn') f.outline = u
       if (p.kind === 'outlineHold') f.outline = 1
       if (p.kind === 'outlineOut') f.outline = 1 - u
+      if (p.kind === 'pauseIn') f.pause = u
+      if (p.kind === 'pauseHold') f.pause = 1
+      if (p.kind === 'pauseOut') f.pause = 1 - u
       if (p.kind === 'highlightIn') f.highlight = u
       if (highlightAt >= 0 && i > highlightAt && p.kind !== 'fadeIn') f.highlight = 1
       if (p.kind === 'fadeOut') f.opacity = 1 - u
@@ -66,13 +77,14 @@ function frameAt(phases, t, angles) {
 }
 
 // Plays the moves once each time `play` is called, then returns to the starting position;
-// with `animation.loop` it repeats forever once started. `angles` must be memoized.
+// with `animation.loop` it repeats forever once started. `animation.pause`: { after: k } stops
+// after move k (from 0) to show a highlight. `angles` must be memoized.
 export function useMovePlayer(animation, angles) {
   const withHighlight = !!animation?.highlightAfter
   const loop = !!animation?.loop
   const phases = useMemo(
     // hold longer on the starting position when it is highlighted
-    () => angles && buildTimeline(angles.length, !!animation.outlineMoves, withHighlight, animation.highlightBefore ? 2000 : undefined),
+    () => angles && buildTimeline(angles.length, !!animation.outlineMoves, withHighlight, animation.highlightBefore ? 2000 : undefined, animation.pause?.after),
     [angles, animation, withHighlight],
   )
   const [frame, setFrame] = useState(START_FRAME)
