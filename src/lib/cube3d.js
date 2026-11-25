@@ -107,12 +107,16 @@ const faceAxis = (face) => FACES[ROTATION_AXIS[face] ?? SLICES[face] ?? face].n
 // Bigger cubes: Rw turns the outer two layers on the right together (`layers: [1, 2]`, counted in
 // from the face); a lowercase letter turns only the inner slice next to that face (r is the second
 // layer from the right, `layers: [2, 2]`). They turn the same way as the face move.
+// 3Rw turns the outer three layers (`layers: [1, 3]`), and m turns only the middle horizontal
+// layer of a 5x5x5 (`layers: [3, 3]`), the same way as U.
 // With `dims`, a face that can only make half turns (like R on a 3x3x2) turns 180° for R and R'.
 export function parseAlg(alg, dims) {
   const TURNS = { '': 1, "'": -1, 2: 2, "2'": -2 }
-  return [...alg.matchAll(/([RLUDFBMxyz]w?|[rludfb])(2'|2|')?/g)].map(([, name, mod]) => {
+  return [...alg.matchAll(/(3[RLUDFB]w|[RLUDFBMxyz]w?|[rludfbm])(2'|2|')?/g)].map(([, name, mod]) => {
     let face = name, layers
-    if (name.endsWith('w')) { face = name[0]; layers = [1, 2] }
+    if (name[0] === '3') { face = name[1]; layers = [1, 3] }
+    else if (name === 'm') { face = 'U'; layers = [3, 3] }
+    else if (name.endsWith('w')) { face = name[0]; layers = [1, 2] }
     else if (/[rludfb]/.test(name)) { face = name.toUpperCase(); layers = [2, 2] }
     let turns = TURNS[mod ?? '']
     if (dims && Math.abs(turns) === 1 && !quarterTurns(toDims(dims), faceAxis(face))) turns *= 2
@@ -123,7 +127,8 @@ export function parseAlg(alg, dims) {
 const TURN_MARK = { 1: '', [-1]: "'", 2: '2', [-2]: "2'" }
 export const moveName = (m) => {
   const [from, to] = m.layers ?? [1, 1]
-  const base = from === 2 && to === 2 ? m.face.toLowerCase() : to > 1 ? `${m.face}w` : m.face
+  const base = from === 3 && to === 3 ? 'm' : from === 2 && to === 2 ? m.face.toLowerCase()
+    : to === 3 ? `3${m.face}w` : to > 1 ? `${m.face}w` : m.face
   return base + TURN_MARK[m.turns]
 }
 

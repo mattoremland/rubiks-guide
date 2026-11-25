@@ -201,12 +201,12 @@ export default function PuzzlePage() {
                     ))}
                   </div>
                 )}
-                {stage.closing && (
-                  <div className="mt-6">
-                    {stage.closing.text && (
-                      <p className="text-text-secondary text-sm mb-4">{withEmphasis(stage.closing.text)}</p>
+                {[stage.closing].flat().filter(Boolean).map((closing, ci) => (
+                  <div key={ci} className="mt-6">
+                    {closing.text && (
+                      <p className="text-text-secondary text-sm mb-4">{withEmphasis(closing.text)}</p>
                     )}
-                    {(stage.closing.figures ?? (stage.closing.figure ? [stage.closing.figure] : [])).map((fig, i) => (
+                    {(closing.figures ?? (closing.figure ? [closing.figure] : [])).map((fig, i) => (
                       <figure key={i} className="flex flex-col items-center gap-2 mb-4">
                         <CubeDiagram
                           puzzleType={puzzle.type}
@@ -223,11 +223,24 @@ export default function PuzzlePage() {
                         <Caption label={nextLabel()}>{withEmphasis(fig.caption)}</Caption>
                       </figure>
                     ))}
-                    {stage.closing.textAfter && (
-                      <p className="text-text-secondary text-sm mt-4">{withEmphasis(stage.closing.textAfter)}</p>
+                    {closing.algorithms?.length > 0 && (
+                      <div className="space-y-4">
+                        {closing.algorithms.map((alg, i) => (
+                          <AlgorithmCard
+                            key={i}
+                            algorithm={alg}
+                            puzzleType={puzzle.type}
+                            dimensions={puzzle.dimensions}
+                            label={nextLabel()}
+                          />
+                        ))}
+                      </div>
+                    )}
+                    {closing.textAfter && (
+                      <p className="text-text-secondary text-sm mt-4">{withEmphasis(closing.textAfter)}</p>
                     )}
                   </div>
-                )}
+                ))}
               </div>
               )
             })}
