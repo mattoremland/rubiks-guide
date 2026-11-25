@@ -1,5 +1,9 @@
-import { useEffect, useMemo, useState } from 'react'
+import { createContext, useEffect, useMemo, useState } from 'react'
 import { getStickerColor, shadedColor } from '../../data/colors'
+
+// Animations write each move's letter beside the puzzle; turned off where the move is
+// already named under the picture (the notation cards).
+export const MoveLettersContext = createContext(true)
 
 export const ptsStr = (points) => points.map(p => `${p.x},${p.y}`).join(' ')
 export const glow = { filter: 'drop-shadow(0 0 3px rgba(255, 255, 255, 0.6))' }
@@ -46,7 +50,7 @@ function buildTimeline(moveCount, outlineMoves, withHighlight, firstRest, pauseA
 
 // `before` is 1 while the first move has not started yet (for a highlight of the starting position);
 // `pause` fades the highlight shown while stopped part-way through.
-const START_FRAME = { k: 0, angle: 0, outline: 0, highlight: 0, opacity: 1, before: 1, pause: 0 }
+const START_FRAME = { k: 0, angle: 0, outline: 0, highlight: 0, opacity: 1, before: 1, pause: 0, spin: false }
 
 // `angles[k]` is the full turn angle of move k, in radians.
 function frameAt(phases, t, angles) {
@@ -57,7 +61,7 @@ function frameAt(phases, t, angles) {
     if (t < start + p.ms) {
       const u = (t - start) / p.ms
       const before = i < firstSpin || p.kind === 'fadeIn' ? 1 : 0
-      const f = { k: p.k, angle: 0, outline: 0, highlight: 0, opacity: 1, before, pause: 0 }
+      const f = { k: p.k, angle: 0, outline: 0, highlight: 0, opacity: 1, before, pause: 0, spin: p.kind === 'spin' }
       if (p.kind === 'spin') f.angle = angles[p.k] * easeInOut(u)
       if (p.kind === 'outlineIn') f.outline = u
       if (p.kind === 'outlineHold') f.outline = 1
@@ -140,16 +144,42 @@ export function Polygons({ polys, strokeWidth = 1 }) {
   ))
 }
 
-export function TurnArrow({ d }) {
+// Turn arrow (from arrowPaths): arc and arrowhead in one piece, with a dark edge around both so it
+// stands out on any sticker color.
+export function OutlinedArrow({ arrow }) {
+  const parts = (color, width) => (
+    <g stroke={color} strokeWidth={width} strokeLinecap="round" strokeLinejoin="round">
+      <path d={arrow.shaft} fill="none" />
+      <path d={arrow.head} fill={color} />
+    </g>
+  )
   return (
     <>
-      <defs>
-        <marker id="turn-arrowhead" markerWidth="8" markerHeight="6" refX="6" refY="3" orient="auto">
-          <polygon points="0,0 8,3 0,6" fill="#FFD700" />
-        </marker>
-      </defs>
-      <path d={d} fill="none" stroke="#FFD700" strokeWidth={2.5} strokeLinecap="round" markerEnd="url(#turn-arrowhead)" opacity={0.9} />
+      {parts('#1a1a2e', 5.5)}
+      {parts('#FFD700', 2.5)}
     </>
+  )
+}
+
+// The letter of the move being made, beside the part that turns.
+export function MoveLetter({ at, text, opacity = 1 }) {
+  return (
+    <text
+      x={at.x}
+      y={at.y}
+      textAnchor="middle"
+      dominantBaseline="central"
+      fill="#FFFFFF"
+      stroke="#1a1a2e"
+      strokeWidth={5}
+      paintOrder="stroke"
+      fontSize={24}
+      fontWeight={800}
+      fontFamily="ui-monospace, monospace"
+      opacity={opacity}
+    >
+      {text}
+    </text>
   )
 }
 

@@ -1,11 +1,11 @@
-import { useMemo, useRef } from 'react'
+import { useContext, useMemo, useRef } from 'react'
 import {
   applyMove, parseAlg, moveAngle, getTurnPolygons, getCubePolygons, getMoveArrow, getMoveOutlineEdges, getPieceEdges,
   getStickerGroupOutline, getStickerFacingArrow, getViewBounds, getFaceLabelPoint, getHiddenFaceLabel, isFaceVisible, dimsOf,
-  DEFAULT_CUBE_VIEW,
+  getMoveLabelPoint, moveName, DEFAULT_CUBE_VIEW,
 } from '../../lib/cube3d'
 import {
-  useMovePlayer, useFirstVisible, Polygons, TurnArrow, ReplayButton, ptsStr, glow, shadow, growBox, viewBoxOf,
+  useMovePlayer, useFirstVisible, MoveLettersContext, Polygons, OutlinedArrow, MoveLetter, ReplayButton, ptsStr, glow, shadow, growBox, viewBoxOf,
 } from './movePlayer'
 import { getStickerColor } from '../../data/colors'
 
@@ -89,13 +89,19 @@ export default function IsoCube3D({ state, size = 200, animation, view, groups, 
   }, [state, moves])
 
   const arrows = useMemo(() => moves?.map(m => getMoveArrow(m, v, dims)) ?? [], [moves, v, dims])
+  // each move's letter beside the side that turns
+  // `animation.moveLetters: false` leaves them out (a turn with no letter in the notation)
+  const letters = useContext(MoveLettersContext) && animation?.moveLetters !== false
+  const moveLabels = useMemo(() => (letters && moves ? moves.map(m => getMoveLabelPoint(m, v, dims)) : []), [letters, moves, v, dims])
 
   const b = getViewBounds(v, dims)
   const box = frameBox ? { ...frameBox } : { minX: b.minX - PAD, minY: b.minY - PAD, maxX: b.maxX + PAD, maxY: b.maxY + PAD }
   for (const a of arrows) growBox(box, a.bounds, ARROW_PAD)
+  for (const p of moveLabels) growBox(box, { minX: p.x, maxX: p.x, minY: p.y, maxY: p.y }, 18)
   // visible faces are labeled in place; hidden ones get a label outside the cube with a pointer
+  // the move letter names the turning face, so that face's own label is left out
   const labelPoints = labels
-    ? Object.entries(labels).map(([face, text]) => {
+    ? Object.entries(labels).filter(([face]) => !(letters && moves?.some(m => m.face === face))).map(([face, text]) => {
       if (isFaceVisible(face, v)) return { text, ...getFaceLabelPoint(face, v, dims) }
       // keep the label away from the head of the first turn arrow
       const side = arrows[0] && (arrows[0].end.x > 0 ? 'left' : 'right')
@@ -121,6 +127,9 @@ export default function IsoCube3D({ state, size = 200, animation, view, groups, 
   const finished = moves && frame.k >= moves.length
   const currentMove = moves && !finished && moves[frame.k]
   const arrow = moves && !finished && arrows[frame.k]
+  // the arrow shows only before the turn (fading with the outline), never during it
+  const arrowOpacity = frame.spin ? 0 : animation?.outlineMoves ? frame.outline : 1
+  const moveLabel = currentMove && moveLabels[frame.k]
 
   const svg = (
     <svg viewBox={viewBoxOf(box)} width={size} height={size} className="block">
@@ -262,7 +271,12 @@ export default function IsoCube3D({ state, size = 200, animation, view, groups, 
           {p.text}
         </text>
       ))}
-      {arrow && <TurnArrow d={arrow.d} />}
+      {arrow && arrowOpacity > 0 && (
+        <g opacity={arrowOpacity}>
+          <OutlinedArrow arrow={arrow} />
+        </g>
+      )}
+      {moveLabel && <MoveLetter at={moveLabel} text={moveName(currentMove)} opacity={frame.opacity} />}
     </svg>
   )
 

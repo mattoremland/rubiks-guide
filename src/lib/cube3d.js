@@ -1,3 +1,5 @@
+import { arrowPaths, labelBeyond } from './arrowHead.js'
+
 // 3D model, move simulator and projection for cubes and cuboids (e.g. 2x2x2, 3x3x2).
 // Model axes: x right, y up, z toward the viewer (front). The camera looks along -z with x to the
 // right, so the drawing is not mirrored: a clockwise move looks clockwise on screen.
@@ -102,17 +104,28 @@ const faceAxis = (face) => FACES[ROTATION_AXIS[face] ?? SLICES[face] ?? face].n
 
 // "R U R' U2 x2'" -> [{ face: 'R', turns: 1 }, ...]; turns: 1 clockwise, -1 counterclockwise,
 // 2 half turn clockwise, -2 half turn counterclockwise (same result, opposite direction on screen).
+// Bigger cubes: Rw turns the outer two layers on the right together (`layers: [1, 2]`, counted in
+// from the face); a lowercase letter turns only the inner slice next to that face (r is the second
+// layer from the right, `layers: [2, 2]`). They turn the same way as the face move.
 // With `dims`, a face that can only make half turns (like R on a 3x3x2) turns 180° for R and R'.
 export function parseAlg(alg, dims) {
   const TURNS = { '': 1, "'": -1, 2: 2, "2'": -2 }
-  return [...alg.matchAll(/([RLUDFBMxyz])(2'|2|')?/g)].map(([, face, mod]) => {
+  return [...alg.matchAll(/([RLUDFBMxyz]w?|[rludfb])(2'|2|')?/g)].map(([, name, mod]) => {
+    let face = name, layers
+    if (name.endsWith('w')) { face = name[0]; layers = [1, 2] }
+    else if (/[rludfb]/.test(name)) { face = name.toUpperCase(); layers = [2, 2] }
     let turns = TURNS[mod ?? '']
     if (dims && Math.abs(turns) === 1 && !quarterTurns(toDims(dims), faceAxis(face))) turns *= 2
-    return { face, turns }
+    return layers ? { face, turns, layers } : { face, turns }
   })
 }
 
-export const moveName = (m) => m.face + ({ 1: '', [-1]: "'", 2: '2', [-2]: "2'" })[m.turns]
+const TURN_MARK = { 1: '', [-1]: "'", 2: '2', [-2]: "2'" }
+export const moveName = (m) => {
+  const [from, to] = m.layers ?? [1, 1]
+  const base = from === 2 && to === 2 ? m.face.toLowerCase() : to > 1 ? `${m.face}w` : m.face
+  return base + TURN_MARK[m.turns]
+}
 
 // Clockwise, seen from outside the face, is a negative rotation about its outward normal.
 export const moveAngle = (m) => -m.turns * Math.PI / 2
@@ -124,7 +137,9 @@ function layerOf(dims, move) {
   const axis = faceAxis(move.face)
   const whole = move.face in ROTATION_AXIS
   const extent = half[axisIndex(axis)]
-  const [lo, hi] = move.face in SLICES ? [-step / 2, step / 2] : [extent - step, extent]
+  // `layers` [from, to] counts layers in from the face (1 = the face itself)
+  const [from, to] = move.layers ?? [1, 1]
+  const [lo, hi] = move.face in SLICES ? [-step / 2, step / 2] : [extent - to * step, extent - (from - 1) * step]
   // stickers on the turning face itself sit exactly at `hi`, so that end is inclusive
   const inLayer = (s) => whole || (dot(s.centroid, axis) > lo + 1e-9 && dot(s.centroid, axis) < hi + 1e-9)
   return { axis, whole, extent, lo, hi, inLayer }
@@ -332,17 +347,22 @@ export function getHiddenFaceLabel(face, view = DEFAULT_CUBE_VIEW, side, dims = 
 }
 
 // Arrow along the front of a ring just outside the turning face, pointing the way it turns.
-export function getMoveArrow(move, view = DEFAULT_CUBE_VIEW, dims = 2) {
+// The ring sits on the face, centered on it (`lift` raises it off the face).
+export function getMoveArrow(move, view = DEFAULT_CUBE_VIEW, dims = 2, lift = 0.02) {
   const axis = faceAxis(move.face)
   const { half } = model(dims)
   const slice = move.face in SLICES
   // face moves: a ring just outside the face; middle layers: a ring around the middle of the puzzle
-  const center = slice ? [0, 0, 0] : scale(axis, half[axisIndex(axis)] + 0.5)
+  const center = slice ? [0, 0, 0] : scale(axis, half[axisIndex(axis)] + lift)
   const helper = Math.abs(axis[1]) < 0.9 ? [0, 1, 0] : [1, 0, 0]
   const e1 = unit(cross(helper, axis))
   const e2 = cross(axis, e1)
-  const rho = slice ? Math.hypot(...half.filter((_, k) => k !== axisIndex(axis))) + 0.2 : 0.75
-  const at = (t) => toView(add(center, add(scale(e1, rho * Math.cos(t)), scale(e2, rho * Math.sin(t)))), view)
+  // on a face the ring fills three quarters of it each way, so it stays an oval on a long face;
+  // around a middle layer it is a circle clear of the puzzle
+  const reachAlong = (e) => e.reduce((a, c, k) => a + Math.abs(c) * half[k], 0)
+  const ringR = slice ? Math.hypot(...half.filter((_, k) => k !== axisIndex(axis))) + 0.2 : 0
+  const r1 = slice ? ringR : 0.75 * reachAlong(e1), r2 = slice ? ringR : 0.75 * reachAlong(e2)
+  const at = (t) => toView(add(center, add(scale(e1, r1 * Math.cos(t)), scale(e2, r2 * Math.sin(t)))), view)
   let front = 0, maxZ = -Infinity
   for (let deg = 0; deg < 360; deg += 2) {
     const z = at(deg * Math.PI / 180)[2]
@@ -352,10 +372,12 @@ export function getMoveArrow(move, view = DEFAULT_CUBE_VIEW, dims = 2) {
   const sweep = Math.abs(move.turns) === 2 ? 150 : 115
   const pts = []
   for (let k = -sweep; k <= sweep; k += 5) pts.push(to2d(at((front + dir * k) * Math.PI / 180)))
-  const xs = pts.map(p => p.x), ys = pts.map(p => p.y)
-  return {
-    end: pts[pts.length - 1],
-    d: 'M ' + pts.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' L '),
-    bounds: { minX: Math.min(...xs), maxX: Math.max(...xs), minY: Math.min(...ys), maxY: Math.max(...ys) },
-  }
+  return arrowPaths(pts)
+}
+
+// Where to write a move's letter: beside the puzzle, out past the turning face (and past its turn
+// arrow), so it sits next to the side that moves. Middle layers use the face they turn like.
+export function getMoveLabelPoint(move, view = DEFAULT_CUBE_VIEW, dims = 2, gap = 20) {
+  const corners = boxCorners(dims).map(p => to2d(toView(p, view)))
+  return labelBeyond(to2d(toView(faceAxis(move.face), view)), [...corners, ...getMoveArrow(move, view, dims).points], gap)
 }

@@ -1,6 +1,7 @@
 import CubeDiagram from '../diagrams/CubeDiagram'
 import MoveSequence from '../notation/MoveSequence'
 import SubStepLabel from './SubStepLabel'
+import { withEmphasis } from '../../lib/emphasis'
 
 export default function AlgorithmCard({ algorithm, puzzleType, dimensions, label }) {
   return (
@@ -24,7 +25,7 @@ export default function AlgorithmCard({ algorithm, puzzleType, dimensions, label
           </h4>
           {algorithm.caseDescription && (
             <p className="text-sm text-text-secondary mt-1">
-              {algorithm.caseDescription}
+              {withEmphasis(algorithm.caseDescription)}
             </p>
           )}
           <div className="mt-3">

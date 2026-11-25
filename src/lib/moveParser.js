@@ -15,9 +15,11 @@ const FACE_COLORS = {
   l: 'bg-orange-300 text-gray-900',
   r: 'bg-red-400',
   b: 'bg-blue-400',
+  d: 'bg-yellow-200 text-gray-900',
+  f: 'bg-green-400',
 }
 
-const MOVE_REGEX = /(\(|\))|([RLUDFBMESxyzulrb]w?)(['2])?/g
+const MOVE_REGEX = /(\(|\))|([RLUDFBMESxyz]w?|[ulrbdf])(['2])?/g
 
 export function parseMoves(notation) {
   if (!notation) return []
@@ -38,7 +40,7 @@ export function parseMoves(notation) {
       let category = 'face'
       if ('xyz'.includes(face)) category = 'rotation'
       else if ('MES'.includes(face)) category = 'slice'
-      else if ('ulrb'.includes(face)) category = 'tip'
+      else if ('ulrbdf'.includes(face)) category = 'tip'
       else if (isWide) category = 'wide'
 
       tokens.push({

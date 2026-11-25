@@ -1,4 +1,5 @@
-import { useParams, Link } from 'react-router-dom'
+import { useEffect } from 'react'
+import { useParams, useLocation, Link } from 'react-router-dom'
 import { getPuzzleBySlug } from '../data/puzzles'
 import { getNotation } from '../data/notations'
 import Breadcrumbs from '../components/layout/Breadcrumbs'
@@ -21,7 +22,7 @@ function labeler(stepNumber) {
 function Caption({ label, children }) {
   return (
     <figcaption className="flex items-start gap-2 text-sm text-text-secondary max-w-xl">
-      <SubStepLabel label={label} />
+      {label && <SubStepLabel label={label} />}
       {children && <span>{children}</span>}
     </figcaption>
   )
@@ -29,6 +30,18 @@ function Caption({ label, children }) {
 
 export default function PuzzlePage() {
   const { puzzleSlug } = useParams()
+  const { hash } = useLocation()
+  // a link to a sub-step (#step-6f) scrolls to it once the page has drawn
+  useEffect(() => {
+    if (!hash) return
+    const id = setTimeout(() => {
+      // the label sits under its picture, so scroll to the whole figure or card it belongs to
+      const label = document.getElementById(hash.slice(1))
+      const target = label?.closest('figure') ?? label?.closest('.rounded-xl') ?? label
+      target?.scrollIntoView({ block: 'start' })
+    }, 50)
+    return () => clearTimeout(id)
+  }, [hash, puzzleSlug])
   const puzzle = getPuzzleBySlug(puzzleSlug)
   const notation = getNotation(puzzleSlug)
 
@@ -68,6 +81,12 @@ export default function PuzzlePage() {
           </div>
         </div>
       </div>
+
+      {method?.callout && (
+        <aside className="mb-10 bg-surface-raised border border-border border-l-4 border-l-accent rounded-lg p-4">
+          <p className="text-text-primary text-sm">{withEmphasis(method.callout)}</p>
+        </aside>
+      )}
 
       {method?.notation && <PuzzleNotation puzzleType={puzzle.type} notation={method.notation} />}
 
@@ -132,7 +151,7 @@ export default function PuzzlePage() {
                             size={160}
                           />
                         )}
-                        <Caption label={nextLabel()}>{withEmphasis(fig.caption)}</Caption>
+                        <Caption label={fig.unlabeled ? undefined : nextLabel()}>{withEmphasis(fig.caption)}</Caption>
                       </figure>
                     ))}
                   </div>

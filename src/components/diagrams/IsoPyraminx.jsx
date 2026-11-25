@@ -1,13 +1,13 @@
-import { useMemo, useRef } from 'react'
+import { useContext, useMemo, useRef } from 'react'
 import { getFaceStickers, getVisibleFaces, getPyraFaceShading } from '../../lib/pyraminxGeometry'
 import {
   applyTurn, getTurnPolygons, getPuzzlePolygons, getTurnArrow, getLayerOutline,
-  getStickerGroupOutline, getBottomBandOutline, getViewBounds, getCornerLabelPoint, DEFAULT_VIEW,
+  getStickerGroupOutline, getBottomBandOutline, getViewBounds, getCornerLabelPoint, getTurnLabelPoint, turnName, DEFAULT_VIEW,
 } from '../../lib/pyraminx3d'
 import { getSticker, getHighlight } from '../../lib/cubeState'
 import IsoSticker from './IsoSticker'
 import {
-  useMovePlayer, useFirstVisible, Polygons, TurnArrow, ReplayButton, ptsStr, glow, shadow, growBox, viewBoxOf,
+  useMovePlayer, useFirstVisible, MoveLettersContext, Polygons, OutlinedArrow, MoveLetter, ReplayButton, ptsStr, glow, shadow, growBox, viewBoxOf,
 } from './movePlayer'
 
 const PAD = 25
@@ -54,10 +54,15 @@ export default function IsoPyraminx({ state, highlights, size = 200, animation, 
   }, [state, moves])
 
   const arrows = useMemo(() => moves?.map(m => getTurnArrow(m.vertex, m.dir, v)) ?? [], [moves, v])
+  // each move's letter beside the corner that turns
+  // `animation.moveLetters: false` leaves them out (a turn with no letter in the notation)
+  const letters = useContext(MoveLettersContext) && animation?.moveLetters !== false
+  const moveLabels = useMemo(() => (letters && moves ? moves.map(m => getTurnLabelPoint(m.vertex, m.dir, v)) : []), [letters, moves, v])
 
   const b = getViewBounds(v)
   const box = { minX: b.minX - PAD, minY: b.minY - PAD, maxX: b.maxX + PAD, maxY: b.maxY + PAD }
   for (const a of arrows) growBox(box, a.bounds, ARROW_PAD)
+  for (const p of moveLabels) growBox(box, { minX: p.x, maxX: p.x, minY: p.y, maxY: p.y }, 18)
   const labelPoints = labels ? Object.entries(labels).map(([vertex, text]) => ({ text, ...getCornerLabelPoint(vertex, v) })) : []
   for (const p of labelPoints) growBox(box, { minX: p.x, maxX: p.x, minY: p.y, maxY: p.y }, 14)
   const viewBox = viewBoxOf(box)
@@ -76,6 +81,9 @@ export default function IsoPyraminx({ state, highlights, size = 200, animation, 
   const finished = moves && frame.k >= moves.length
   const currentMove = moves && !finished && moves[frame.k]
   const arrow = moves && !finished && arrows[frame.k]
+  // the arrow shows only before the turn (fading with the outline), never during it
+  const arrowOpacity = frame.spin ? 0 : animation?.outlineMoves ? frame.outline : 1
+  const moveLabel = currentMove && moveLabels[frame.k]
 
   const svg = (
     <svg viewBox={viewBox} width={size} height={size} className="block">
@@ -151,7 +159,12 @@ export default function IsoPyraminx({ state, highlights, size = 200, animation, 
           style={shadow}
         />
       )}
-      {arrow && <TurnArrow d={arrow.d} />}
+      {arrow && arrowOpacity > 0 && (
+        <g opacity={arrowOpacity}>
+          <OutlinedArrow arrow={arrow} />
+        </g>
+      )}
+      {moveLabel && <MoveLetter at={moveLabel} text={turnName(currentMove)} opacity={frame.opacity} />}
     </svg>
   )
 

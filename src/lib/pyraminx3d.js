@@ -1,3 +1,5 @@
+import { arrowPaths, labelBeyond } from './arrowHead.js'
+
 const EDGE = 150
 const H = EDGE * Math.sqrt(2 / 3)
 const CIRC_R = EDGE / Math.sqrt(3)
@@ -221,9 +223,18 @@ export function getTurnArrow(vertex, dir, view = DEFAULT_VIEW) {
   }
   const pts = []
   for (let k = -115; k <= 115; k += 5) pts.push(to2d(at((front + dir * k) * Math.PI / 180)))
-  const xs = pts.map(p => p.x), ys = pts.map(p => p.y)
-  return {
-    d: 'M ' + pts.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' L '),
-    bounds: { minX: Math.min(...xs), maxX: Math.max(...xs), minY: Math.min(...ys), maxY: Math.max(...ys) },
-  }
+  return arrowPaths(pts)
+}
+
+// A move's name with the F face in front: U, L, R, B for the corners (lowercase for a tip alone),
+// ' for counterclockwise.
+export const turnName = (m) => {
+  const letter = { apex: 'U', fl: 'L', fr: 'R', back: 'B' }[m.vertex]
+  return (m.layer === 'tip' ? letter.toLowerCase() : letter) + (m.dir < 0 ? "'" : '')
+}
+
+// Where to write a move's letter: beside the turning corner, past its turn arrow.
+export function getTurnLabelPoint(vertex, dir, view = DEFAULT_VIEW, gap = 18) {
+  const corners = Object.values(V).map(p => to2d(toView(p, view)))
+  return labelBeyond(to2d(toView(V[vertex], view)), [...corners, ...getTurnArrow(vertex, dir, view).points], gap)
 }

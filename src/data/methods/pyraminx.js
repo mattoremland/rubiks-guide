@@ -109,6 +109,8 @@ export const pyraminxMethod = {
         state: TIPS_SOLVED,
         moves: [{ vertex: 'fr', layer: 'big', dir: 1 }],
         outlineMoves: true,
+        // this corner points at the camera ("the front axial corner"), which has no letter
+        moveLetters: false,
         // each red tip with the center beside it
         highlightAfter: [
           { face: 'R', indices: [0, 2] },
