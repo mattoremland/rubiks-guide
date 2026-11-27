@@ -20,9 +20,12 @@ export default function CubeDiagram({
   pieces,
   highlightColor,
 }) {
+  const typeLabel = puzzleType === 'pyraminx' ? 'Pyraminx' : puzzleType === 'cuboid' ? 'Cuboid' : 'Cube'
+  const desc = animation ? `${typeLabel} diagram with animation` : `${typeLabel} diagram`
+
   if (puzzleType === 'pyraminx') {
     return (
-      <div className="flex items-center justify-center">
+      <div className="flex items-center justify-center" role="img" aria-label={desc} style={{ minHeight: size }}>
         <IsoPyraminx
           state={state}
           highlights={highlights}
@@ -41,7 +44,7 @@ export default function CubeDiagram({
   if ((puzzleType === 'cube' || puzzleType === 'cuboid') && animation?.tilt) {
     // the camera moves (animation.tilt is the angle it ends on); the cube itself doesn't turn
     return (
-      <div className="flex items-center justify-center">
+      <div className="flex items-center justify-center" role="img" aria-label={desc} style={{ minHeight: size }}>
         <TiltCube
           state={state}
           from={view ?? DEFAULT_CUBE_VIEW}
@@ -56,7 +59,7 @@ export default function CubeDiagram({
 
   if (puzzleType === 'cube' || puzzleType === 'cuboid') {
     return (
-      <div className="flex items-center justify-center">
+      <div className="flex items-center justify-center" role="img" aria-label={desc} style={{ minHeight: size }}>
         <IsoCube3D state={state} size={size} animation={animation} view={view} groups={groups} labels={labels} pieces={pieces} highlightColor={highlightColor} />
       </div>
     )
@@ -69,7 +72,7 @@ export default function CubeDiagram({
   }
 
   return (
-    <div className="flex items-center justify-center">
+    <div className="flex items-center justify-center" role="img" aria-label={desc} style={{ minHeight: size }}>
       <IsoCube
         state={state}
         highlights={highlights}

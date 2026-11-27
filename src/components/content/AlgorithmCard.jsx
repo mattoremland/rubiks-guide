@@ -5,7 +5,7 @@ import { withEmphasis } from '../../lib/emphasis'
 
 export default function AlgorithmCard({ algorithm, puzzleType, dimensions, label }) {
   return (
-    <div className="bg-surface-raised border border-border rounded-xl p-5">
+    <div className="bg-surface-raised border border-border rounded-xl p-5 transition-colors hover:border-accent hover:bg-surface-hover/50">
       <div className="flex flex-col sm:flex-row gap-4">
         <div className="flex-shrink-0">
           <CubeDiagram

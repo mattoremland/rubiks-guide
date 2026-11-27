@@ -62,8 +62,8 @@ export default function QuickReference({ stages, puzzleType, dimensions, storage
                 {stage.quick.map(item => item.heading ? (
                   <li key={item.heading} className="pt-3 text-sm font-medium text-text-primary">{withEmphasis(item.heading)}</li>
                 ) : (
-                  <li key={item.label} className="grid gap-x-4 gap-y-1 grid-cols-[auto_1fr] sm:grid-cols-[minmax(0,16rem)_auto_1fr] items-center">
-                    <span className="col-span-2 sm:col-span-1 flex items-center gap-2 text-sm text-text-secondary">
+                  <li key={item.label} className="flex flex-col gap-2 sm:grid sm:gap-x-4 sm:gap-y-1 sm:grid-cols-[minmax(0,16rem)_auto_1fr] sm:items-center">
+                    <span className="flex items-center gap-2 text-sm text-text-secondary">
                       {item.ref && (
                         <a href={`#step-${item.ref}`} onClick={e => jump(e, `step-${item.ref}`)} aria-label={`Example ${item.ref}`}>
                           <SubStepLabel label={item.ref} anchor={false} />

@@ -123,7 +123,7 @@ export default function PuzzlePage() {
         </section>
       )}
 
-      <section>
+      <section id="walkthrough-section">
         <h2 className="text-xl font-semibold text-text-primary mb-4">
           Walkthrough
         </h2>
@@ -134,7 +134,7 @@ export default function PuzzlePage() {
               return (
               <div key={stage.slug} id={`stage-${stage.slug}`} className="scroll-mt-24 bg-surface-raised border border-border rounded-lg p-5">
                 <h3 className="text-lg font-semibold text-text-primary mb-2">{stage.name}</h3>
-                <p className="text-text-secondary text-sm mb-4">{withEmphasis(stage.description)}</p>
+                <p className="text-text-secondary text-[15px] leading-relaxed mb-4 max-w-prose">{withEmphasis(stage.description)}</p>
                 {stage.figures && (
                   <div className="flex flex-wrap justify-center gap-8 mb-6">
                     {stage.figures.map((fig, i) => (
@@ -199,10 +199,10 @@ export default function PuzzlePage() {
                   </figure>
                 )}
                 {stage.footer && (
-                  <p className="text-text-secondary text-sm mb-4">{withEmphasis(stage.footer)}</p>
+                  <p className="text-text-secondary text-[15px] leading-relaxed mb-4 max-w-prose">{withEmphasis(stage.footer)}</p>
                 )}
                 {stage.note && (
-                  <p className="text-text-secondary text-sm mb-4">{withEmphasis(stage.note)}</p>
+                  <p className="text-text-secondary text-[15px] leading-relaxed mb-4 max-w-prose">{withEmphasis(stage.note)}</p>
                 )}
                 {stage.algorithms.length > 0 && (
                   <div className="space-y-4">
@@ -220,7 +220,7 @@ export default function PuzzlePage() {
                 {[stage.closing].flat().filter(Boolean).map((closing, ci) => (
                   <div key={ci} className="mt-6">
                     {closing.text && (
-                      <p className="text-text-secondary text-sm mb-4">{withEmphasis(closing.text)}</p>
+                      <p className="text-text-secondary text-[15px] leading-relaxed mb-4 max-w-prose">{withEmphasis(closing.text)}</p>
                     )}
                     {(closing.figures ?? (closing.figure ? [closing.figure] : [])).map((fig, i) => (
                       <figure key={i} className="flex flex-col items-center gap-2 mb-4">
@@ -253,7 +253,7 @@ export default function PuzzlePage() {
                       </div>
                     )}
                     {closing.textAfter && (
-                      <p className="text-text-secondary text-sm mt-4">{withEmphasis(closing.textAfter)}</p>
+                      <p className="text-text-secondary text-[15px] leading-relaxed mt-4 max-w-prose">{withEmphasis(closing.textAfter)}</p>
                     )}
                   </div>
                 ))}
