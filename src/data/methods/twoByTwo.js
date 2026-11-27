@@ -123,7 +123,7 @@ export const twoByTwoMethod = {
             highlightAfter: [{ face: 'F', indices: [2] }, { face: 'R', indices: [0] }],
           },
           caption:
-            'Note the red sticker facing you on the white bar below: the corner that drops in next to it must also have red. Of the two white corners left, only one has any red on it, so there is only one choice. Then, in this example, a single U brings the white-red corner to the top front-right, directly above the location it needs to go.',
+            'Note the red sticker facing you on the white bar below: the corner that drops in next to it must also have red. Of the two white corners left, only one has any red on it, so there is only one choice. Then, in this example, a single `U` brings the white-red corner to the top front-right, directly above the location it needs to go.',
         },
       },
       algorithms: [],
@@ -131,15 +131,18 @@ export const twoByTwoMethod = {
     {
       slug: 'insert',
       name: 'Step 3: Insert the Corner',
+      quick: [
+        { label: 'Insert a white corner (repeat until it is in)', moves: INSERT, ref: '3a', state: S2, groups: TOP_FRONT_RIGHT },
+      ],
       description:
-        "Do R U R' U' until the corner is slotted in and correctly oriented (may take a few times).",
+        "Do `R U R' U'` until the corner is slotted in and correctly oriented (may take a few times).",
       animation: {
         state: S2,
         alg: STEP3,
         outlineMoves: true,
         // the inserted corner, with its red now beside the red of the white bar
         highlightAfter: [{ face: 'F', indices: [2, 3] }, { face: 'R', indices: [2] }],
-        caption: "This corner needs R U R' U' three times.",
+        caption: "This corner needs `R U R' U'` three times.",
       },
       algorithms: [],
     },
@@ -147,7 +150,7 @@ export const twoByTwoMethod = {
       slug: 'last-white',
       name: 'Step 4: Position the Last White Corner',
       description:
-        'Turn the whole cube (y) so the empty white slot is at the front right. Then rotate the top face so the remaining white corner is directly above the location it needs to go, as in step 2b.',
+        'Turn the whole cube (`y`) so the empty white slot is at the front right. Then rotate the top face so the remaining white corner is directly above the location it needs to go, as in step 2b.',
       animation: {
         state: S3,
         alg: STEP4,
@@ -172,7 +175,10 @@ export const twoByTwoMethod = {
     {
       slug: 'yellow-top',
       name: 'Step 6: Yellow Top',
-      description: `With white on bottom, repeat the following until top face is all yellow: ${ORIENT}`,
+      quick: [
+        { label: 'All yellow on top (repeat)', moves: ORIENT, ref: '6c', state: S5, groups: [{ face: 'U', indices: [0] }] },
+      ],
+      description: `With white on bottom, repeat the following until top face is all yellow: \`${ORIENT}\``,
       figures: [
         {
           state: S5,
@@ -205,21 +211,24 @@ export const twoByTwoMethod = {
           state: S6,
           groups: [{ face: 'R', indices: [0, 1] }],
           caption:
-            "In most cases, you will have a side that is actually paired up correctly. If so, move this to the right face with yellow on top, and rotate the bottom of the cube until the entire right side (green in this example) is solved. Then do U'.",
+            "In most cases, you will have a side that is actually paired up correctly. If so, move this to the right face with yellow on top, and rotate the bottom of the cube until the entire right side (green in this example) is solved. Then do `U'`.",
         },
       ],
       animation: {
         state: S6,
         alg: STEP7,
         outlineMoves: true,
-        caption: "Here the pair is already on the right, so D lines up the green bottom under it, then U'.",
+        caption: "Here the pair is already on the right, so `D` lines up the green bottom under it, then `U'`.",
       },
       algorithms: [],
     },
     {
       slug: 'swap',
       name: 'Step 8: Finish',
-      description: `Do ${SWAP}.`,
+      quick: [
+        { label: "Finish (after lining up green face and doing U')", moves: SWAP, ref: '8a', state: S7 },
+      ],
+      description: `Do \`${SWAP}\`.`,
       animation: {
         state: S7,
         alg: SWAP,

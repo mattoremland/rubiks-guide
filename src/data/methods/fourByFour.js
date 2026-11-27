@@ -126,6 +126,8 @@ const GREEN_TOP = applyAlg(SOLVED, 'z y2')
 const ACROSS = applyAlg(GREEN_TOP, inverse(SWAP_ACROSS))
 // the front and right edges on top switched (green on top, white in front)
 const NEXT_TO = applyAlg(GREEN_TOP, inverse(`${SWAP_ACROSS} y ${EDGE_CYCLE}`))
+// outline each sticker on its own (the quick reference pictures)
+const one = (stickers) => stickers.map(([face, i]) => ({ face, indices: [i] }))
 const TOP_EDGE = [{ face: 'U', indices: [13, 14] }, { face: 'F', indices: [1, 2] }]
 
 export const fourByFourMethod = {
@@ -148,7 +150,7 @@ export const fourByFourMethod = {
         highlightAfter: [{ face: 'F', indices: C }],
         highlightColor: ON_WHITE,
         caption:
-          "If we encounter this situation, we can do Lw' U' Lw to solve the white center. Here: Lw' lifts the left half up, so the front's white joins the white on top to make a second bar; U' turns that bar to sit above the gap, and Lw brings it back down next to the first bar.",
+          "If we encounter this situation, we can do `Lw' U' Lw` to solve the white center. Here: `Lw'` lifts the left half up, so the front's white joins the white on top to make a second bar; `U'` turns that bar to sit above the gap, and `Lw` brings it back down next to the first bar.",
       },
       algorithms: [],
     },
@@ -162,10 +164,10 @@ export const fourByFourMethod = {
         alg: TURN_AROUND,
         highlightBefore: [{ face: 'F', indices: C }],
         highlightColor: ON_WHITE,
-        caption: 'x2 turns the whole cube toward the back twice, so the white center ends up at the back.',
+        caption: '`x2` turns the whole cube toward the back twice, so the white center ends up at the back.',
       },
       note:
-        "Here we have more limited freedom because we don't want to break up the white center. Turning any outer face is safe, but r, l, u and d (and the wide turns) carry part of the white center away, unless we undo them right after.",
+        "Here we have more limited freedom because we don't want to break up the white center. Turning any outer face is safe, but `r`, `l`, `u` and `d` (and the wide turns) carry part of the white center away, unless we undo them right after.",
       algorithms: [
         {
           name: 'The elevator',
@@ -178,7 +180,7 @@ export const fourByFourMethod = {
             highlightAfter: [{ face: 'F', indices: [6, 10] }],
           },
           caseDescription:
-            "We can do a move like Rw U2 Rw' to go up and bring that yellow bar down to the front face. Rw lifts the right half of the front up, U2 swings the yellow bar into its place, and Rw' brings it back down. The white center goes down and comes back up untouched.",
+            "We can do a move like `Rw U2 Rw'` to go up and bring that yellow bar down to the front face. `Rw` lifts the right half of the front up, `U2` swings the yellow bar into its place, and `Rw'` brings it back down. The white center goes down and comes back up untouched.",
           tips: 'This move is called the elevator. We will be using it a lot throughout this cube.',
         },
       ],
@@ -195,7 +197,7 @@ export const fourByFourMethod = {
         pause: { after: 0, highlight: [{ face: 'U', indices: [5, 9, 10] }, { face: 'F', indices: [6] }] },
         highlightAfter: [{ face: 'U', indices: C }],
         caption:
-          "Here: y turns the cube so yellow is on the left and white on the right, and F2 Rw' F' Rw solves red on the top. F2 moves the front's red to the bottom left, Rw' brings the top's right column (with the gap) down to the front, F' turns the red into that column, and Rw takes the column back up.",
+          "Here: `y` turns the cube so yellow is on the left and white on the right, and `F2 Rw' F' Rw` solves red on the top. `F2` moves the front's red to the bottom left, `Rw'` brings the top's right column (with the gap) down to the front, `F'` turns the red into that column, and `Rw` takes the column back up.",
       },
       algorithms: [],
       closing: {
@@ -209,7 +211,7 @@ export const fourByFourMethod = {
               highlightAfter: [{ face: 'F', indices: C }],
             },
             caption:
-              "After the red center, we do x2 so red is on the bottom, and then solve the green center: Rw U Rw', then Lw' U Lw. Rw lifts the front's right column (with its green) up beside a green on top, U turns both into that column, and Rw' brings them down. Lw' U Lw does the same on the left.",
+              "After the red center, we do `x2` so red is on the bottom, and then solve the green center: `Rw U Rw'`, then `Lw' U Lw`. `Rw` lifts the front's right column (with its green) up beside a green on top, `U` turns both into that column, and `Rw'` brings them down. `Lw' U Lw` does the same on the left.",
           },
           {
             state: GREEN_DONE,
@@ -220,7 +222,7 @@ export const fourByFourMethod = {
               highlightAfter: [{ face: 'F', indices: C }, { face: 'U', indices: C }],
             },
             caption:
-              "Then do x' and solve the orange center: U2 Lw' U' Lw. By doing this the blue center will automatically be solved.",
+              "Then do `x'` and solve the orange center: `U2 Lw' U' Lw`. By doing this the blue center will automatically be solved.",
           },
         ],
       },
@@ -228,8 +230,11 @@ export const fourByFourMethod = {
     {
       slug: 'edges',
       name: 'Step 4: Pair the Edges',
+      quick: [
+        { label: 'Pair two pieces across the front', moves: PAIR_EDGES, ref: '4a', state: S4, groups: one([['F', 8], ['F', 11]]) },
+      ],
       description:
-        "Step 4 is to pair the edges. We could do this with slicing, but we'll use just one algorithm to solve all edges. We line up two middle edges directly across from each other and do: Dw R F' U R' F Dw'. This will pair these two inner edges. We don't need them to be near any particular center, we just pair them first. Repeat until all inner edges are paired.",
+        "Step 4 is to pair the edges. We could do this with slicing, but we'll use just one algorithm to solve all edges. We line up two middle edges directly across from each other and do: `Dw R F' U R' F Dw'`. This will pair these two inner edges. We don't need them to be near any particular center, we just pair them first. Repeat until all inner edges are paired.",
       animation: {
         state: S4,
         alg: PAIR_EDGES,
@@ -238,7 +243,7 @@ export const fourByFourMethod = {
         highlightBefore: [{ face: 'F', indices: [8] }, { face: 'L', indices: [11] }, { face: 'F', indices: [11] }, { face: 'R', indices: [8] }],
         highlightAfter: [{ face: 'F', indices: [7, 11] }, { face: 'R', indices: [4, 8] }],
         caption:
-          "Here two matching pieces sit directly across from each other on the front face, both in the lower middle row with the same color facing front. Dw R F' U R' F Dw' brings them together on the right.",
+          "Here two matching pieces sit directly across from each other on the front face, both in the lower middle row with the same color facing front. `Dw R F' U R' F Dw'` brings them together on the right.",
       },
       algorithms: [],
       closing: {
@@ -252,7 +257,7 @@ export const fourByFourMethod = {
               highlightAfter: [{ face: 'F', indices: [4, 8] }],
             },
             caption:
-              "This exact same algorithm also pairs the two inner edges above the ones in 4a, which is useful if you find a pair there instead of in the lower row. Here two matching pieces sit across from each other in the upper middle row, and Dw R F' U R' F Dw' brings them together on the left.",
+              "This exact same algorithm also pairs the two inner edges above the ones in 4a, which is useful if you find a pair there instead of in the lower row. Here two matching pieces sit across from each other in the upper middle row, and `Dw R F' U R' F Dw'` brings them together on the left.",
           },
           {
             state: EDGES_PAIRED,
@@ -264,6 +269,12 @@ export const fourByFourMethod = {
     {
       slug: 'like-a-3x3',
       name: 'Step 5: Solve It Like a 3x3x3',
+      quickNote: 'Solve it as a [3x3x3](/puzzle/3x3), with these extra cases:',
+      quick: [
+        { label: 'A single flipped edge, held top front', moves: FLIP_EDGE, ref: '5a', state: ONE_FLIPPED, groups: one([['U', 13], ['U', 14], ['F', 1], ['F', 2]]) },
+        { label: 'Two edges across from each other', moves: SWAP_ACROSS, ref: '5b', state: ACROSS, groups: one([['F', 1], ['F', 2]]) },
+        { label: 'Two edges next to each other', moves: `(${SWAP_ACROSS}) y ${EDGE_CYCLE}`, ref: '5c', state: NEXT_TO, groups: one([['F', 1], ['F', 2], ['R', 1], ['R', 2]]) },
+      ],
       description:
         'We have now reduced the 4x4x4 to behaving like a 3x3x3: we can solve it using the exact same process as the 3x3x3.',
       figures: [
@@ -320,7 +331,7 @@ export const fourByFourMethod = {
           },
           caseDescription:
             'If we have two next to each other that need to be switched, but the other two are correct, we can still do this algorithm to force three edges to be incorrect, then use the original algorithm from the 3x3x3 to solve.',
-          tips: 'Here the front and right edges on top are switched. After r2 U2 r2 Uw2 r2 u2 three edges are wrong and the left one is correct, a case we know how to solve from step 6f of the 3x3x3.',
+          tips: 'Here the front and right edges on top are switched. After `r2 U2 r2 Uw2 r2 u2` three edges are wrong and the left one is correct, a case we know how to solve from step 6f of the 3x3x3.',
         },
       ],
     },

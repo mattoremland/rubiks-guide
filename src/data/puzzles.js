@@ -14,7 +14,7 @@ export const puzzles = [
     type: 'cube',
     dimensions: { x: 2, y: 2, z: 2 },
     description: 'The pocket cube — a simpler version of the classic 3x3.',
-    difficulty: 2,
+    difficulty: 3,
     pieceCount: 8,
   },
   {
@@ -23,7 +23,7 @@ export const puzzles = [
     type: 'cuboid',
     dimensions: { x: 2, y: 3, z: 2 },
     description: 'A tower cuboid — taller than it is wide.',
-    difficulty: 3,
+    difficulty: 2,
     pieceCount: 12,
   },
   {
@@ -60,7 +60,7 @@ export const puzzles = [
     type: 'cube',
     dimensions: { x: 5, y: 5, z: 5 },
     description: 'The Professor\'s Cube — the largest standard NxN.',
-    difficulty: 6,
+    difficulty: 5,
     pieceCount: 98,
   },
 ]

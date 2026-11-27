@@ -119,13 +119,17 @@ export function parseAlg(alg, dims) {
     else if (name.endsWith('w')) { face = name[0]; layers = [1, 2] }
     else if (/[rludfb]/.test(name)) { face = name.toUpperCase(); layers = [2, 2] }
     let turns = TURNS[mod ?? '']
-    if (dims && Math.abs(turns) === 1 && !quarterTurns(toDims(dims), faceAxis(face))) turns *= 2
-    return layers ? { face, turns, layers } : { face, turns }
+    // a face that only makes half turns still shows the letter as written (R, not R2)
+    let shown
+    if (dims && Math.abs(turns) === 1 && !quarterTurns(toDims(dims), faceAxis(face))) { turns *= 2; shown = name + (mod ?? '') }
+    const m = layers ? { face, turns, layers } : { face, turns }
+    return shown ? { ...m, shown } : m
   })
 }
 
 const TURN_MARK = { 1: '', [-1]: "'", 2: '2', [-2]: "2'" }
 export const moveName = (m) => {
+  if (m.shown) return m.shown
   const [from, to] = m.layers ?? [1, 1]
   const base = from === 3 && to === 3 ? 'm' : from === 2 && to === 2 ? m.face.toLowerCase()
     : to === 3 ? `3${m.face}w` : to > 1 ? `${m.face}w` : m.face

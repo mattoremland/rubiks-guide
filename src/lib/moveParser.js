@@ -17,9 +17,11 @@ const FACE_COLORS = {
   b: 'bg-blue-400',
   d: 'bg-yellow-200 text-gray-900',
   f: 'bg-green-400',
+  m: 'bg-purple-400',
 }
 
-const MOVE_REGEX = /(\(|\))|(3[RLUDFB]w|[RLUDFBMESxyz]w?|[ulrbdfm])(['2])?/g
+// a digit right before a bracket is a repeat count: 3(R U2) means do (R U2) three times
+const MOVE_REGEX = /(\d)(?=\s*\()|(\(|\))|(3[RLUDFB]w|[RLUDFBMESxyz]w?|[ulrbdfm])(['2])?/g
 
 export function parseMoves(notation) {
   if (!notation) return []
@@ -30,10 +32,12 @@ export function parseMoves(notation) {
   MOVE_REGEX.lastIndex = 0
   while ((match = MOVE_REGEX.exec(notation)) !== null) {
     if (match[1]) {
-      tokens.push({ type: 'paren', value: match[1] })
+      tokens.push({ type: 'repeat', value: match[1] })
+    } else if (match[2]) {
+      tokens.push({ type: 'paren', value: match[2] })
     } else {
-      const base = match[2]
-      const modifier = match[3] || ''
+      const base = match[3]
+      const modifier = match[4] || ''
       const isWide = base.endsWith('w')
       const face = isWide ? base.replace(/^3/, '')[0] : base
 

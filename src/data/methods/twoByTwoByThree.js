@@ -37,6 +37,8 @@ const CASE_C = applyAlg(applyAlg(START, `${STEP1B} ${SWAP} ${ALIGN} ${MATCH} y $
 // row, 2-3 the middle row and 4-5 the bottom row, left to right as you look at that face.
 // pale blue, so outlines stand out against white stickers
 const ON_WHITE = '#7DD3FC'
+// outline each sticker on its own (the quick reference pictures)
+const one = (stickers) => stickers.map(([face, i]) => ({ face, indices: [i] }))
 
 export const twoByTwoByThreeNotation = {
   intro:
@@ -88,13 +90,16 @@ export const twoByTwoByThreeMethod = {
         highlightAfter: [{ face: 'F', indices: [4, 5] }],
         highlightColor: ON_WHITE,
         caption:
-          'Turn the entire cube over so this white bar is on the bottom. You will have to pair the other two white corners on the top to form another white bar. After doing that, you may have to rotate U, and then bring that second white bar down to the bottom.',
+          'Turn the entire cube over so this white bar is on the bottom. You will have to pair the other two white corners on the top to form another white bar. After doing that, you may have to rotate `U`, and then bring that second white bar down to the bottom.',
       },
       algorithms: [],
     },
     {
       slug: 'yellow-top',
       name: 'Step 2: Solve the Top Face',
+      quick: [
+        { label: 'Swap the two top-right corners', moves: "(R U R U' R) (F U' F U F)", ref: '2a', state: S1, groups: one([['F', 1], ['R', 0], ['R', 1]]) },
+      ],
       description: 'Solve the top face.',
       animation: {
         state: S1,
@@ -102,13 +107,17 @@ export const twoByTwoByThreeMethod = {
         outlineMoves: true,
         highlightBefore: [{ face: 'F', indices: [1] }, { face: 'R', indices: [0, 1] }],
         highlightAfter: [{ face: 'F', indices: [0, 1] }, { face: 'R', indices: [0, 1] }],
-        caption: `To swap places of the two corners on the top right of the cube: (R U R U' R) (F U' F U F). You will need to do this at most two times. Repeat until yellow face is solved on top. In this example a final ${ALIGN} then lines the top up with the bottom.`,
+        caption: `To swap places of the two corners on the top right of the cube: \`(R U R U' R) (F U' F U F)\`. You will need to do this at most two times. Repeat until yellow face is solved on top. In this example a final \`${ALIGN}\` then lines the top up with the bottom.`,
       },
       algorithms: [],
     },
     {
       slug: 'middle-layer',
       name: 'Step 3: Middle Layer',
+      quick: [
+        { label: 'Swap the two right middle edges', moves: '(R U2) (R U2) (R U2)', ref: '3a', state: CASE_A, groups: one([['F', 3], ['R', 2], ['R', 3]]) },
+        { label: 'No adjacent edges match: R, then M R if they match', moves: MATCH, ref: '3b', state: S2 },
+      ],
       description:
         'Rotate the top and bottom so that they align with each other (e.g. blues and reds are lined up in this example). In the middle row there are three possibilities here:',
       // a different cube: the two right middle pieces are swapped
@@ -118,7 +127,7 @@ export const twoByTwoByThreeMethod = {
         outlineMoves: true,
         highlightBefore: [{ face: 'F', indices: [3] }, { face: 'R', indices: [2, 3] }],
         highlightAfter: [{ face: 'F', indices: [2, 3] }, { face: 'R', indices: [2, 3] }],
-        caption: '2 adjacent pieces match. To swap the mismatched middle edges, place them on the right and do 3 (R U2).',
+        caption: '2 adjacent pieces match. To swap the mismatched middle edges, place them on the right and do `3(R U2)`.',
       },
       closing: {
         figures: [
@@ -132,7 +141,7 @@ export const twoByTwoByThreeMethod = {
               highlightAfter: [{ face: 'F', indices: [2, 3] }, { face: 'R', indices: [2, 3] }],
             },
             caption:
-              'No adjacent edges match. Test positioning by doing R and seeing if middle edges match (you may need to rotate the entire cube a few times to check all possibilities). If they do, do M R.',
+              'No adjacent edges match. Test positioning by doing `R` and seeing if middle edges match (you may need to rotate the entire cube a few times to check all possibilities). If they do, do `M R`.',
           },
           {
             // a different cube where no position gives a match after R
@@ -142,7 +151,7 @@ export const twoByTwoByThreeMethod = {
               outlineMoves: true,
             },
             caption:
-              'No adjacent edges match AND there is no way to get a match by doing step 3b. In this case do 3 (R U2), then follow step 3a or 3b again, as appropriate.',
+              'No adjacent edges match AND there is no way to get a match by doing step 3b. In this case do `3(R U2)`, then follow step 3a or 3b again, as appropriate.',
           },
         ],
       },

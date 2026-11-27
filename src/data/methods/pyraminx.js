@@ -125,6 +125,10 @@ export const pyraminxMethod = {
     {
       slug: 'edges',
       name: 'Step 3: Insert Edges',
+      quick: [
+        { label: 'Insert from the right (red side on the right)', moves: "L' U L", ref: '3b', state: RED_BOTTOM_RIGHT_CASE, view: { x: -16, y: 43 }, groups: [{ face: 'F', indices: [3] }, { face: 'R', indices: [1] }] },
+        { label: 'Insert from the left (red side on the left)', moves: "R U' R'", ref: '3c', state: RED_BOTTOM_LEFT_CASE, view: { x: -16, y: -37 }, groups: [{ face: 'F', indices: [1] }, { face: 'L', indices: [3] }] },
+      ],
       description:
         'Identify a middle edge that needs to be moved to the bottom. Rotate the top axial corner until that piece is on the front face, with the red side *away* from the front. The red side will then be either on the left or the right axial corner, and the other side (in this example, yellow) will match the corners on the bottom of this face.',
       figures: [
@@ -186,7 +190,7 @@ export const pyraminxMethod = {
       slug: 'align-top',
       name: 'Step 4: Align the Top Corner',
       description:
-        'Rotate the top axial corner so that the three corners match (in this example, a U would set up yellow as the next face to solve).',
+        'Rotate the top axial corner so that the three corners match (in this example, a `U` would set up yellow as the next face to solve).',
       animation: {
         state: BOTTOM_SOLVED,
         moves: [{ vertex: 'apex', layer: 'big', dir: 1 }],
@@ -200,7 +204,7 @@ export const pyraminxMethod = {
           { face: 'R', indices: [4, 5] },
           { face: 'R', indices: [8, 7] },
         ],
-        caption: "After the U, the yellow face's centers all match, and so do the green face's.",
+        caption: "After the `U`, the yellow face's centers all match, and so do the green face's.",
       },
       footer: 'Now orient the next face to solve (either yellow or green in this example) to the bottom and repeat step 3 to solve it.',
       algorithms: [],

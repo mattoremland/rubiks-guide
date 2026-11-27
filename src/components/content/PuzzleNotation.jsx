@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import CubeDiagram from '../diagrams/CubeDiagram'
 import MoveSequence from '../notation/MoveSequence'
 import { withEmphasis } from '../../lib/emphasis'
@@ -17,7 +18,7 @@ function MoveGrid({ puzzleType, state, view, moves }) {
             labels={m.labels}
             size={140}
           />
-          <MoveSequence notation={m.notation} neutral />
+          <MoveSequence notation={m.notation} />
           <figcaption className="text-xs text-text-secondary text-center">{m.label}</figcaption>
         </figure>
       ))}
@@ -27,10 +28,31 @@ function MoveGrid({ puzzleType, state, view, moves }) {
 
 // Notation section: defines the pieces with labeled figures, then animates each move.
 // `sections` ([{ text, moves }]) add further groups of moves, each with its own explanation.
-export default function PuzzleNotation({ puzzleType, notation: n }) {
+// With `collapsible`, the section starts closed every visit and the heading opens and closes it.
+export default function PuzzleNotation({ puzzleType, notation: n, collapsible = false }) {
+  const [open, setOpen] = useState(!collapsible)
+  const toggle = () => setOpen(!open)
   return (
     <section className="mb-10">
-      <h2 className="text-xl font-semibold text-text-primary mb-4">Notation</h2>
+      {collapsible ? (
+        <h2 className="mb-4">
+          <button
+            type="button"
+            onClick={toggle}
+            aria-expanded={open}
+            className="flex items-center gap-2 text-xl font-semibold text-text-primary hover:text-accent"
+          >
+            <svg viewBox="0 0 20 20" aria-hidden="true" className={`w-4 h-4 fill-current transition-transform ${open ? 'rotate-90' : ''}`}>
+              <path d="M7 4l7 6-7 6z" />
+            </svg>
+            Notation
+            <span className="text-sm font-normal text-text-muted">{open ? '(click to hide)' : '(click to show)'}</span>
+          </button>
+        </h2>
+      ) : (
+        <h2 className="text-xl font-semibold text-text-primary mb-4">Notation</h2>
+      )}
+      {open && (
       <div className="bg-surface-raised border border-border rounded-lg p-5 space-y-6">
         <p className="text-text-secondary text-sm">{withEmphasis(n.intro)}</p>
         <div className="flex flex-wrap justify-center gap-8">
@@ -60,6 +82,7 @@ export default function PuzzleNotation({ puzzleType, notation: n }) {
         ))}
         </MoveLettersContext.Provider>
       </div>
+      )}
     </section>
   )
 }

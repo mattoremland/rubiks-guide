@@ -107,7 +107,10 @@ export const threeByThreeByTwoMethod = {
     {
       slug: 'insert',
       name: 'Step 3: Insert the Corner',
-      description: `Place the piece in the corner using ${INSERT}.`,
+      quick: [
+        { label: 'Insert a white corner (front right)', moves: INSERT, ref: '3a', state: S2, groups: TOP_FRONT_RIGHT },
+      ],
+      description: `Place the piece in the corner using \`${INSERT}\`.`,
       animation: {
         state: S2,
         alg: INSERT,
@@ -121,6 +124,9 @@ export const threeByThreeByTwoMethod = {
     {
       slug: 'top-corners',
       name: 'Step 4: Solve the Top Corners',
+      quick: [
+        { label: 'Top corners (headlights on the left)', moves: `(${INSERT}) y' (R U' R U R)`, ref: '4b', state: BOTTOM, groups: [{ face: 'L', indices: [0] }, { face: 'L', indices: [2] }] },
+      ],
       description: 'Solve the corners on the top layer.',
       figures: [
         {
@@ -137,13 +143,17 @@ export const threeByThreeByTwoMethod = {
         // the headlights flash through the cube on the left before the algorithm starts
         highlightBefore: [{ face: 'L', indices: [0] }, { face: 'L', indices: [2] }],
         highlightAfter: [{ face: 'F', indices: [0, 2] }, { face: 'R', indices: [0, 2] }],
-        caption: `Hold the cube so the headlights are on the left and do the following: (${INSERT}), rotate the entire cube counterclockwise once (y'), then (R U' R U R). Note the U and U' switch places in this algorithm, after the rotation. In this example a final ${ALIGN} then lines the corners up with the bottom.`,
+        caption: `Hold the cube so the headlights are on the left and do the following: \`(${INSERT})\`, rotate the entire cube counterclockwise once (\`y'\`), then \`(R U' R U R)\`. Note the \`U\` and \`U'\` switch places in this algorithm, after the rotation. In this example a final \`${ALIGN}\` then lines the corners up with the bottom.`,
       },
       algorithms: [],
     },
     {
       slug: 'top-edges',
       name: 'Step 5: Solve the Top Edges',
+      quick: [
+        { label: 'Swap the front and back edges', moves: '(R U2) (R U2) (R U2)', ref: '5a', state: FB_CASE, groups: [{ face: 'F', indices: [1] }, { face: 'B', indices: [1] }] },
+        { label: 'Swap the front and right edges', moves: "(R U) (R U) (R U2) (R U2) (R U) (R U') R", ref: '5b', state: S4, groups: [{ face: 'F', indices: [1] }, { face: 'R', indices: [1] }] },
+      ],
       description:
         'Solve the edges on the top layer. The middle edges may either need to be swapped across from each other, or as neighbors.',
       // a different cube at the same point: the front edge and the back edge (shown through the
@@ -154,7 +164,7 @@ export const threeByThreeByTwoMethod = {
         outlineMoves: true,
         highlightBefore: [{ face: 'F', indices: [1] }, { face: 'B', indices: [1] }],
         highlightAfter: [{ face: 'F', indices: [1] }],
-        caption: 'It is possible that two opposite middle edges need to be swapped. If so, do: 3(R U2), which means "do (R U2) three times".',
+        caption: 'It is possible that two opposite middle edges need to be swapped. If so, do: `3(R U2)`, which means "do `(R U2)` three times".',
       },
       closing: {
         figure: {
@@ -165,7 +175,7 @@ export const threeByThreeByTwoMethod = {
             highlightBefore: [{ face: 'F', indices: [1] }, { face: 'R', indices: [1] }],
             highlightAfter: [{ face: 'F', indices: [1] }, { face: 'R', indices: [1] }],
           },
-          caption: "It is also possible that two neighboring edges need to be swapped. If so, do 2(R U) 2(R U2) (R U) (R U') R.",
+          caption: "It is also possible that two neighboring edges need to be swapped. If so, do `2(R U) 2(R U2) (R U) (R U') R`.",
         },
         textAfter:
           'You may have to apply one or both of these algorithms to get the middle edges all correctly aligned.',

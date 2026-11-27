@@ -9,9 +9,12 @@ import { createSolvedState, createPyraminxSolvedState } from '../lib/cubeState'
 import { getMethod } from '../data/methods'
 import AlgorithmCard from '../components/content/AlgorithmCard'
 import PuzzleNotation from '../components/content/PuzzleNotation'
+import QuickReference from '../components/content/QuickReference'
+import AdvancedPanel from '../components/content/AdvancedPanel'
 import { withEmphasis } from '../lib/emphasis'
 import SubStepLabel from '../components/content/SubStepLabel'
 import TopPattern from '../components/diagrams/TopPattern'
+import DifficultyBadge from '../components/content/DifficultyBadge'
 
 // Hands out sub-step labels (3a, 3b, ...) in the order items appear within a step.
 function labeler(stepNumber) {
@@ -73,12 +76,9 @@ export default function PuzzlePage() {
             size={200}
           />
         </div>
-        <div>
-          <h1 className="text-3xl font-bold text-text-primary mb-2">{puzzle.name}</h1>
-          <p className="text-text-secondary mb-4">{puzzle.description}</p>
-          <div className="flex gap-4 text-sm text-text-muted">
-            <span>{puzzle.pieceCount} pieces</span>
-          </div>
+        <div className="flex items-center gap-3 self-center">
+          <h1 className="text-3xl font-bold text-text-primary">{puzzle.name}</h1>
+          <DifficultyBadge difficulty={puzzle.difficulty} />
         </div>
       </div>
 
@@ -88,7 +88,16 @@ export default function PuzzlePage() {
         </aside>
       )}
 
-      {method?.notation && <PuzzleNotation puzzleType={puzzle.type} notation={method.notation} />}
+      {method?.notation && (
+        <PuzzleNotation
+          key={puzzleSlug}
+          puzzleType={puzzle.type}
+          notation={method.notation}
+          collapsible
+        />
+      )}
+
+      {method && <QuickReference key={puzzleSlug} stages={method.stages} puzzleType={puzzle.type} dimensions={puzzle.dimensions} storageKey={puzzleSlug} />}
 
       {notation && !method?.notation && (
         <section className="mb-10">
@@ -100,10 +109,10 @@ export default function PuzzlePage() {
                 <div className="flex flex-wrap gap-2">
                   {group.moves.map((move) => (
                     <div key={move} className="flex flex-col items-center gap-1">
-                      <MoveSequence notation={move} neutral={puzzle.type === 'pyraminx'} />
-                      <MoveSequence notation={`${move}'`} neutral={puzzle.type === 'pyraminx'} />
+                      <MoveSequence notation={move} />
+                      <MoveSequence notation={`${move}'`} />
                       {notation.modifiers?.['2'] && (
-                        <MoveSequence notation={`${move}2`} neutral={puzzle.type === 'pyraminx'} />
+                        <MoveSequence notation={`${move}2`} />
                       )}
                     </div>
                   ))}
@@ -116,15 +125,14 @@ export default function PuzzlePage() {
 
       <section>
         <h2 className="text-xl font-semibold text-text-primary mb-4">
-          {method ? `Solving Method: ${method.name}` : 'Solving Method'}
+          Walkthrough
         </h2>
         {method ? (
           <div className="space-y-6">
-            <p className="text-text-secondary">{method.description}</p>
             {method.stages.map((stage, stageIndex) => {
               const nextLabel = labeler(stageIndex + 1)
               return (
-              <div key={stage.slug} className="bg-surface-raised border border-border rounded-lg p-5">
+              <div key={stage.slug} id={`stage-${stage.slug}`} className="scroll-mt-24 bg-surface-raised border border-border rounded-lg p-5">
                 <h3 className="text-lg font-semibold text-text-primary mb-2">{stage.name}</h3>
                 <p className="text-text-secondary text-sm mb-4">{withEmphasis(stage.description)}</p>
                 {stage.figures && (
@@ -156,6 +164,14 @@ export default function PuzzlePage() {
                     ))}
                   </div>
                 )}
+                {stage.advanced && (
+                  <AdvancedPanel
+                    advanced={stage.advanced}
+                    puzzleType={puzzle.type}
+                    dimensions={puzzle.dimensions}
+                    id={`advanced-${stage.slug}`}
+                  />
+                )}
                 {stage.setupState && (
                   <figure className="flex flex-col items-center gap-2 mb-4">
                     <CubeDiagram
@@ -179,7 +195,7 @@ export default function PuzzlePage() {
                       pieces={stage.animation.pieces}
                       size={180}
                     />
-                    <Caption label={nextLabel()}>{stage.animation.caption}</Caption>
+                    <Caption label={nextLabel()}>{stage.animation.caption && withEmphasis(stage.animation.caption)}</Caption>
                   </figure>
                 )}
                 {stage.footer && (

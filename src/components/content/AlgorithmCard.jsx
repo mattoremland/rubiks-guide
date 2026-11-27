@@ -29,11 +29,11 @@ export default function AlgorithmCard({ algorithm, puzzleType, dimensions, label
             </p>
           )}
           <div className="mt-3">
-            <MoveSequence notation={algorithm.moves} neutral={puzzleType === 'pyraminx'} />
+            <MoveSequence notation={algorithm.moves} />
           </div>
           {algorithm.tips && (
             <p className="text-xs text-text-muted mt-3 italic">
-              {algorithm.tips}
+              {withEmphasis(algorithm.tips)}
             </p>
           )}
         </div>

@@ -145,7 +145,7 @@ export const fiveByFiveMethod = {
         highlightAfter: [{ face: 'F', indices: [7, 8, 12, 13, 17, 18] }],
         highlightColor: ON_WHITE,
         caption:
-          "Then form two other white bars and slot them into the white face. Here Rw' brings the bar on top down next to the first one. Slot the third bar in the same way to finish the white center.",
+          "Then form two other white bars and slot them into the white face. Here `Rw'` brings the bar on top down next to the first one. Slot the third bar in the same way to finish the white center.",
       },
       algorithms: [],
       closing: [{
@@ -161,7 +161,7 @@ export const fiveByFiveMethod = {
               highlightAfter: [{ face: 'F', indices: [12, 17] }],
             },
             caption:
-              "To match a piece to the yellow center here, we can't just do Rw', because that will mess up white. We actually bring the yellow piece down, rotate the 2-bar out of the way, then rotate back to restore white: Rw' F Rw.",
+              "To match a piece to the yellow center here, we can't just do `Rw'`, because that will mess up white. We actually bring the yellow piece down, rotate the 2-bar out of the way, then rotate back to restore white: `Rw' F Rw`.",
           },
           {
             state: S1D,
@@ -171,7 +171,7 @@ export const fiveByFiveMethod = {
               highlightBefore: [{ face: 'F', indices: [7, 12, 17] }, { face: 'U', indices: [8, 13, 18] }],
               highlightAfter: [{ face: 'F', indices: [6, 7, 11, 12, 16, 17] }],
             },
-            caption: "Here we can't just do Rw' to bring that bar down (that will break white). So we do Rw' F2 Rw.",
+            caption: "Here we can't just do `Rw'` to bring that bar down (that will break white). So we do `Rw' F2 Rw`.",
           },
           {
             state: S1E,
@@ -182,7 +182,7 @@ export const fiveByFiveMethod = {
               highlightAfter: [{ face: 'F', indices: C9 }],
             },
             caption:
-              "To insert the last bar we actually position it above a completed bar, not the empty one. Then we do Rw U2 Rw' (this move is called the elevator).",
+              "To insert the last bar we actually position it above a completed bar, not the empty one. Then we do `Rw U2 Rw'` (this move is called the elevator).",
           },
         ],
       }],
@@ -190,6 +190,9 @@ export const fiveByFiveMethod = {
     {
       slug: 'last-centers',
       name: 'Step 2: The Remaining Centers',
+      quick: [
+        { label: 'Orange and blue together', moves: ORANGE_BLUE, ref: '2e', state: S2_OB, groups: one([['F', 8], ['U', 18]]) },
+      ],
       description:
         'Then we do the red and green centers. This leaves blue and orange (the last two centers), which have to be solved in unison - it can be tricky.',
       algorithms: [],
@@ -204,12 +207,12 @@ export const fiveByFiveMethod = {
               highlightBefore: [{ face: 'F', indices: C9 }],
               highlightAfter: [{ face: 'L', indices: C9 }],
             },
-            caption: 'y turns the whole cube so the yellow center is on the left and the white center (at the back) comes round to the right.',
+            caption: '`y` turns the whole cube so the yellow center is on the left and the white center (at the back) comes round to the right.',
           },
         ],
       }, {
         text:
-          'Then we go around solving the other centers using these same strategies. With yellow on the left, the suggested order is red, then green. Rw and Lw no longer touch the yellow or white centers, so red can be built anywhere with the same bars.',
+          'Then we go around solving the other centers using these same strategies. With yellow on the left, the suggested order is red, then green. `Rw` and `Lw` no longer touch the yellow or white centers, so red can be built anywhere with the same bars.',
         figures: [
           {
             state: S1G,
@@ -220,12 +223,12 @@ export const fiveByFiveMethod = {
               highlightAfter: [{ face: 'F', indices: [7, 8, 12, 13, 17, 18] }],
             },
             caption:
-              "Red: here Rw' brings the bar on top straight down next to the red center's bar. Nothing needs undoing, because Rw' only turns the white center on the right around as a whole.",
+              "Red: here `Rw'` brings the bar on top straight down next to the red center's bar. Nothing needs undoing, because `Rw'` only turns the white center on the right around as a whole.",
           },
         ],
       }, {
         text:
-          "Once red is done, turn the cube so red is on the bottom and green is in front (yellow stays on the left). Now any Rw or Lw carries part of red away, so, just like with yellow, we undo it: bring a piece or bar down, turn F out of the way, and go back up (Rw' F Rw, Rw' F2 Rw), or use the elevator Rw U2 Rw'.",
+          "Once red is done, turn the cube so red is on the bottom and green is in front (yellow stays on the left). Now any `Rw` or `Lw` carries part of red away, so, just like with yellow, we undo it: bring a piece or bar down, turn `F` out of the way, and go back up (`Rw' F Rw`, `Rw' F2 Rw`), or use the elevator `Rw U2 Rw'`.",
         figures: [
           {
             state: S1H,
@@ -236,7 +239,7 @@ export const fiveByFiveMethod = {
               highlightAfter: [{ face: 'F', indices: [6, 7, 11, 12, 16, 17] }],
             },
             caption:
-              "Green, with red on the bottom: Rw' F2 Rw slots the bar on top in on the left. Rw' takes part of the red center round to the back, and Rw brings it back.",
+              "Green, with red on the bottom: `Rw' F2 Rw` slots the bar on top in on the left. `Rw'` takes part of the red center round to the back, and `Rw` brings it back.",
           },
           {
             state: S1I,
@@ -247,7 +250,7 @@ export const fiveByFiveMethod = {
               highlightAfter: [{ face: 'F', indices: C9 }],
             },
             caption:
-              "The last green bar goes above a finished bar again, then the elevator Rw U2 Rw'. Part of red comes up to the front and goes back down untouched.",
+              "The last green bar goes above a finished bar again, then the elevator `Rw U2 Rw'`. Part of red comes up to the front and goes back down untouched.",
           },
         ],
       }, {
@@ -265,7 +268,7 @@ export const fiveByFiveMethod = {
               highlightAfter: [{ face: 'F', indices: C9 }, { face: 'U', indices: C9 }],
             },
             caseDescription:
-              "Once we have this configuration (with orange on the F face), do: Rw U Rw' U Lw F2 Lw'. This solves all of the centers.",
+              "Once we have this configuration (with orange on the F face), do: `Rw U Rw' U Lw F2 Lw'`. This solves all of the centers.",
             tips: "Here the front's top-right center piece is blue and the top's front-right center piece is orange; every other center is already solved.",
           },
         ],
@@ -274,6 +277,16 @@ export const fiveByFiveMethod = {
     {
       slug: 'edges',
       name: 'Step 3: The Edges',
+      quick: [
+        {
+          label: 'Scrambled inner edge, held top front',
+          moves: FIX_EDGE,
+          ref: '3c',
+          state: S3C,
+          groups: one([['U', 21], ['F', 1], ['U', 22], ['F', 2], ['U', 23], ['F', 3]]),
+        },
+        { label: 'Last two inner edges, then 3c', moves: LAST_TWO, ref: '3d', state: S3D, groups: one([['F', 5]]) },
+      ],
       description:
         "Now we need to do the edges. We're just building all inner edges, we don't care what center they end up by. We do this by slicing - a new technique.",
       animation: {
@@ -284,14 +297,14 @@ export const fiveByFiveMethod = {
         highlightBefore: one([['F', 10], ['L', 14], ['F', 19], ['R', 15]]),
         highlightAfter: one([['U', 1], ['U', 2]]),
         caption:
-          "Here the red/green middle edge is on the left, and the highlighted piece on the right is also a red/green, oriented such that the green is facing right (shown through the cube). In this case we 'slice' by doing Dw', then move it up with L', then replace that location by doing U, then L and Dw to restore the white center.",
+          "Here the red/green middle edge is on the left, and the highlighted piece on the right is also a red/green, oriented such that the green is facing right (shown through the cube). In this case we 'slice' by doing `Dw'`, then move it up with `L'`, then replace that location by doing `U`, then `L` and `Dw` to restore the white center.",
       },
       note:
-        "The important thing here is not the algorithm per se but the strategy. We may slice left-to-right as well using this same idea. The main thing to remember is that when we did the U to move the completed pair out of the way, *we have to make sure that whatever we bring in there is not a completed inner edge*, because it will get broken up. So we look for an incomplete edge on the top. If there isn't one, we can search on the back or elsewhere and bring it to the top prior to starting this step.",
+        "The important thing here is not the algorithm per se but the strategy. We may slice left-to-right as well using this same idea. The main thing to remember is that when we did the `U` to move the completed pair out of the way, *we have to make sure that whatever we bring in there is not a completed inner edge*, because it will get broken up. So we look for an incomplete edge on the top. If there isn't one, we can search on the back or elsewhere and bring it to the top prior to starting this step.",
       algorithms: [],
       closing: [{
         text:
-          "We can also do a 'middle slice', if the configuration is right. Let m denote a rotation of only the middle horizontal layer.",
+          "We can also do a 'middle slice', if the configuration is right. Let `m` denote a rotation of only the middle horizontal layer.",
         figures: [
           {
             state: S3B,
@@ -302,7 +315,7 @@ export const fiveByFiveMethod = {
               highlightAfter: one([['U', 21], ['F', 1], ['U', 22], ['F', 2], ['U', 23], ['F', 3]]),
             },
             caption:
-              "In this case the yellow/orange middle edge is on the left (its orange shown through the cube), and the two outer middle edge pieces are on the right. Then m' forms a complete inner edge - but we need to move it out of the way so we can restore the orange center. We do this by (in this example) R U R' m. The completed inner edge happens to be on the front of the top face now.",
+              "In this case the yellow/orange middle edge is on the left (its orange shown through the cube), and the two outer middle edge pieces are on the right. Then `m'` forms a complete inner edge - but we need to move it out of the way so we can restore the orange center. We do this by (in this example) `R U R' m`. The completed inner edge happens to be on the front of the top face now.",
           },
         ],
       }, {
@@ -315,7 +328,7 @@ export const fiveByFiveMethod = {
             setupState: S3C,
             animation: { alg: FIX_EDGE, outlineMoves: true, highlightBefore: TOP_FRONT_EDGE, highlightAfter: TOP_FRONT_EDGE },
             caseDescription:
-              'This can be fixed by holding this inner edge on the front of the upper face and doing the moves below. Note that 3Rw here means the three right-most layers (see the notation section).',
+              'This can be fixed by holding this inner edge on the front of the upper face and doing the moves below. Note that `3Rw` here means the three right-most layers (see the notation section).',
             tips: "Here the edge's two outer pieces have green on top, but its middle piece has yellow on top.",
           },
         ],
@@ -334,8 +347,8 @@ export const fiveByFiveMethod = {
               highlightAfter: [{ face: 'F', indices: [9, 14, 19] }, { face: 'R', indices: [5, 10, 15] }],
             },
             caseDescription:
-              "Doing Uw' (R U R' F R' F' R) Uw will pair the white/orange inner edge, but it may be scrambled (as it is in this case), so apply the algorithm from [step 3c](/puzzle/5x5#step-3c) to fix that.",
-            tips: "Here the white/orange edge ends up on the right with its middle piece the other way round. F' brings it to the front of the top face for the step 3c algorithm.",
+              "Doing `Uw' (R U R' F R' F' R) Uw` will pair the white/orange inner edge, but it may be scrambled (as it is in this case), so apply the algorithm from [step 3c](/puzzle/5x5#step-3c) to fix that.",
+            tips: "Here the white/orange edge ends up on the right with its middle piece the other way round. `F'` brings it to the front of the top face for the step 3c algorithm.",
           },
         ],
         textAfter: 'This should allow us to solve all inner edges.',
@@ -344,6 +357,7 @@ export const fiveByFiveMethod = {
     {
       slug: 'like-a-3x3',
       name: 'Step 4: Solve It Like a 3x3x3',
+      quickNote: 'Solve it exactly as a [3x3x3](/puzzle/3x3).',
       description:
         'We have now reduced the 5x5x5 to behaving like a 3x3x3: we can solve it using the exact same process as the [3x3x3](/puzzle/3x3).',
       figures: [
